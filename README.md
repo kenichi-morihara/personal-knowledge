@@ -43,16 +43,16 @@ Python 3.11以上とPyYAMLを使います。仮想環境はGit対象外です。
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install -r requirements-mcp.txt
 .venv/bin/python scripts/validate.py
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
 実データはprivate Gitに保存しますが、認証情報・トークン・銀行ログイン情報・生の取込資料は保存しません。生資料はリポジトリ外に保管し、必要な確認済み情報と資料名だけを記録します。Git履歴は通常の削除後も残ります。
 
-## 次の接続
+## ChatGPT・Claudeから使う
 
-初期構築はローカル利用です。Web・スマホからの共通検索・更新には、後日認証付きリモート接続が必要です。MCP・外部DB・通知・送金や納税の実行は未実装です。
+認証付きMCPを追加しました。[接続・起動手順](docs/mcp.md)に従い、このMacから一時HTTPS URLを発行できます。検索・取得・依頼した登録／更新を共通のGit原本に対して行います。Macとサーバープロセスの稼働が必要です。外部DB・銀行自動取得・通知・送金や納税実行は未実装です。
 
 UFJ残高は手入力から開始します。[公式CSV明細出力](https://direct.bk.mufg.jp/fw/ib_help/meisai.html)は利用可能ですが、自動取込は未実装です。[MoneytreeのChatGPT連携](https://getmoneytree.com/press-release-jp/apps-in-chatgpt)は、当リポジトリやClaudeとの同期とは別機能です。
 

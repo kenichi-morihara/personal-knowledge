@@ -14,3 +14,6 @@ __pycache__/
 imports/
 backups/
 work/
+
+# MCP credentials and logs must live outside this checkout
+*.log
