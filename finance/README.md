@@ -1,6 +1,6 @@
 # 金融・支払い
 
-[残高雛形](../templates/balance.md)と[支払い義務雛形](../templates/obligation.md)を使います。UFJの確認済み表示残高は[2026-10-25のスナップショット](balances/mufg-20261025-034510.md)に記録しています。税金・支払いは未登録です。
+[残高雛形](../templates/balance.md)と[支払い義務雛形](../templates/obligation.md)を使います。UFJの確認済み表示残高は[2026-10-25のスナップショット](balances/mufg-20261025-034510.md)に記録しています。税金・国保・年金は[2026年・2027年の管理ページ](taxes/README.md)から確認します。金額と支払い実績は未確認です。
 
 ## 残高
 
