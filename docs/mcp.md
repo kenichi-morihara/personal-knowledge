@@ -24,7 +24,7 @@ cd "$(ghq root)/github.com/kenichi-morihara/personal-knowledge"
 
 1. Plugins → Add → Add custom MCP serverを開く。
 2. 名前を`Personal Knowledge`、Server URLを起動時のURL、AuthenticationをOAuthにする。
-3. Advanced OAuth settingsではDCR（自動登録）を利用する。CIMDは未実装。必要な場合、スコープは`knowledge:read knowledge:write offline_access`を指定する。
+3. Advanced OAuth settingsではDCR（自動登録）を利用する。CIMDは未実装。読み書きする場合、Base scopesに`knowledge:read`、`knowledge:write`、`offline_access`を1行ずつ指定する。自動検出では読み取りだけが選ばれることがある。参照専用なら`knowledge:read`だけを指定する。
 4. 内容と権限を確認してCreate as a plugin。所有者認証画面で、自分で始めた接続・正しい戻り先であることを確認して許可する。
 5. 所有者キーはこのMacの次のコマンドでコピーできる。チャットには貼らず、生成した一時URLの所有者認証フォームにだけ貼り付ける。
 
