@@ -1,0 +1,16 @@
+# Credentials and local state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+*token*.json
+.venv/
+__pycache__/
+.DS_Store
+.claude/settings.local.json
+.codex/
+imports/
+backups/
+work/
