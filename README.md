@@ -54,6 +54,6 @@ python3 -m venv .venv
 
 認証付きMCPを追加しました。[接続・起動手順](docs/mcp.md)に従い、このMacから一時HTTPS URLを発行できます。検索・取得・依頼した登録／更新を共通のGit原本に対して行います。Macとサーバープロセスの稼働が必要です。外部DB・銀行自動取得・通知・送金や納税実行は未実装です。
 
-UFJ残高は手入力から開始します。[公式CSV明細出力](https://direct.bk.mufg.jp/fw/ib_help/meisai.html)は利用可能ですが、自動取込は未実装です。[MoneytreeのChatGPT連携](https://getmoneytree.com/press-release-jp/apps-in-chatgpt)は、当リポジトリやClaudeとの同期とは別機能です。
+UFJ残高はMoneytree Webの表示を確認し、[確認日時付きの記録](finance/balances/mufg-20261025-034510.md)として保存しました。リポジトリへの自動同期は未実装です。[公式CSV明細出力](https://direct.bk.mufg.jp/fw/ib_help/meisai.html)は利用可能ですが、自動取込は未実装です。[MoneytreeのChatGPT連携](https://getmoneytree.com/press-release-jp/apps-in-chatgpt)は、当リポジトリやClaudeとの同期とは別機能です。
 
 初期の確認結果とClaude Codeの未検証事項は[検証記録](docs/verification.md)を参照してください。

@@ -89,6 +89,15 @@ class RecordsTest(unittest.TestCase):
         self.write()
         self.assertEqual(self.errors(), [])
 
+    def test_nested_virtualenv_is_not_a_record(self):
+        self.write()
+        dependency = self.root / 'finance/ledger/.venv/lib/package'
+        dependency.mkdir(parents=True)
+        (dependency / 'LICENSE.md').write_text('Dependency license [not a record](absent.md)')
+        count, errors = validator.validate(self.root)
+        self.assertEqual(count, 1)
+        self.assertEqual(errors, [])
+
     def test_broken_relative_link(self):
         self.write()
         (self.root / 'README.md').write_text('[missing](missing.md)')

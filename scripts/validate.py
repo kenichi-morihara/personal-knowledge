@@ -55,7 +55,7 @@ def validate(root):
     count = 0
     for domain in DOMAINS:
         for path in sorted((root / domain).rglob('*.md')):
-            if path.name == 'README.md':
+            if path.name == 'README.md' or any(part.startswith('.') for part in path.relative_to(root).parts):
                 continue
             count += 1
             text = path.read_text()
