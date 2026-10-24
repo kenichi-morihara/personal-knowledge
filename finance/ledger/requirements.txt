@@ -1,0 +1,3 @@
+PyYAML==6.0.3
+beancount==3.2.3
+fava==1.30.16
