@@ -79,6 +79,8 @@ class MCPTest(unittest.TestCase):
         self.assertEqual(authorized.status_code, 302, authorized.text)
         consent_url = authorized.headers['location']
         page = self.client.get(consent_url)
+        # Native HTML form POSTs use Origin:null under no-referrer. Do not reintroduce it.
+        self.assertEqual(page.headers['referrer-policy'], 'same-origin')
         csrf = re.search(r'name="csrf" value="([^"]+)"', page.text).group(1)
         approved = self.client.post(consent_url, headers={'Origin': self.origin}, data={'csrf': csrf, 'owner_key': key or owner_key(self.state)})
         return client_id, verifier, approved, consent_url, csrf
@@ -114,6 +116,8 @@ class MCPTest(unittest.TestCase):
         self.assertEqual(denied.status_code, 403)
         cross_origin = self.client.post(consent_url, headers={'Origin': 'https://evil.invalid'}, data={'csrf': csrf, 'owner_key': owner_key(self.state)})
         self.assertEqual(cross_origin.status_code, 403)
+        null_origin = self.client.post(consent_url, headers={'Origin': 'null'}, data={'csrf': csrf, 'owner_key': owner_key(self.state)})
+        self.assertEqual(null_origin.status_code, 403)
         bad_csrf = self.client.post(consent_url, headers={'Origin': self.origin}, data={'csrf': 'wrong', 'owner_key': owner_key(self.state)})
         self.assertEqual(bad_csrf.status_code, 403)
 

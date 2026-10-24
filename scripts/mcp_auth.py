@@ -98,7 +98,7 @@ class OwnerOAuth:
         pending = self.pending.get(nonce)
         if pending is None:
             return Response('Authorization request expired; reconnect from your AI app.', status_code=400)
-        headers = {'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+        headers = {'Cache-Control': 'no-store', 'Referrer-Policy': 'same-origin',
                    'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff',
                    'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"}
         if request.method == 'GET':
