@@ -7,22 +7,21 @@ Beancountで税金・保険料などの請求と支払いの整合性を検証�
 リポジトリのルートで実行します（Python 3.11以上。初期検証は3.14）。
 
 ```sh
-python3.14 -m venv .beancount/.venv
-.beancount/.venv/bin/python -m pip install -r finance/ledger/requirements.txt
-.beancount/.venv/bin/python finance/ledger/manage.py check
-.beancount/.venv/bin/python finance/ledger/manage.py summary
-.beancount/.venv/bin/python finance/ledger/manage.py serve
+make ledger-setup  # 初回のみ
+make ledger-check
+make ledger-summary
+make fava
 ```
 
-`serve`後、ブラウザで `http://127.0.0.1:5001` を開きます。Ctrl+Cで終了。ローカルだけに読み取り専用で公開します。`build`は帳簿生成のみ、`check`と`summary`は原本も生成ファイルも変更しません。summaryはAgentから扱えるJSONです。
+`make fava`後、ブラウザで `http://127.0.0.1:5001` を開きます。Ctrl+Cで終了。ローカルだけに読み取り専用で公開します。`make ledger-build`は帳簿生成のみ、`make ledger-check`と`make ledger-summary`は原本も生成ファイルも変更しません。summaryはAgentから扱えるJSONです。`make`でコマンド一覧を表示します。Pythonの選択は`make ledger-setup PYTHON=python3.12`のように変更できます。
 
 ## Agentの運用
 
 1. ルートのAGENTS.mdと[金融ルール](../README.md)を読む。
 2. finance配下の既存の`type: obligation`を検索する。通知書・本人申告を根拠に、[雛形](../../templates/obligation.md)で登録・更新する。
 3. 支払いは元レコードのpaymentsに固定IDと支払日・金額・出典を追記し、集計値を整合させる。銀行口座不明なら推測しない。
-4. ルートの検証に加えて、`manage.py check`を実行し、`summary`で未払額を確認する。出典ファイルと確認日を回答に含める。
-5. 原本の変更後は`serve`を再起動してFavaの表示を更新する。Favaの編集機能は無効です。生成ファイルはGit対象外で、次回生成時に置き換わる。
+4. ルートの検証に加えて、`make ledger-check`を実行し、`make ledger-summary`で未払額を確認する。出典ファイルと確認日を回答に含める。
+5. 原本の変更後は`make fava`を再起動してFavaの表示を更新する。Favaの編集機能は無効です。生成ファイルはGit対象外で、次回生成時に置き換わる。
 
 ## 表示の意味と限界
 
@@ -36,7 +35,7 @@ python3.14 -m venv .beancount/.venv
 ## 検証
 
 ```sh
-.beancount/.venv/bin/python -m unittest discover -s finance/ledger -p 'test_*.py' -v
+make ledger-test
 ```
 
 テストは一時ディレクトリの架空データで実行し、実データへ混入させません。初期状態では金融データがないため、Favaは空の帳簿を表示します。
