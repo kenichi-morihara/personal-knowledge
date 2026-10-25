@@ -57,3 +57,7 @@ python3 -m venv .venv
 UFJ残高はMoneytree Webの表示を確認し、[確認日時付きの記録](finance/balances/mufg-20261025-034510.md)として保存しました。リポジトリへの自動同期は未実装です。[公式CSV明細出力](https://direct.bk.mufg.jp/fw/ib_help/meisai.html)は利用可能ですが、自動取込は未実装です。[MoneytreeのChatGPT連携](https://getmoneytree.com/press-release-jp/apps-in-chatgpt)は、当リポジトリやClaudeとの同期とは別機能です。
 
 初期の確認結果とClaude Codeの未検証事項は[検証記録](docs/verification.md)を参照してください。
+
+## 納付書をスマホで撮影
+
+Androidの専用撮影ページからMac内OCRで読み取り、「要確認」として保存します。[使い方](docs/tax-capture.md)。`make capture-start`で起動し、`make capture-pending`で確認待ちを一覧にできます。未確認の撮影記録は債務や支払いに自動計上しません。

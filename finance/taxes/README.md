@@ -21,3 +21,7 @@
 8. 更新後は`make ledger-check`。`make ledger-summary`は全期間の確定請求の残高であり、年別支払い集計ではない。`make fava`で画面を確認する。金額のない計画はBeancount・Favaには計上されない。
 
 支払い履歴は[金融の共通ルール](../README.md)に従う。国保・年金の実際の支払額と控除用資料も記録する。[国民年金の公式案内](https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html)。
+
+## 納付書の撮影
+
+Androidからの[撮影とOCR](../../docs/tax-capture.md)を利用できます。`captures/`内の`capture_status: needs_review`は確認待ちのメモであり、請求・支払いの原本ではありません。確認後に原本へ反映し、撮影メモは原本と関連づけて`reviewed`に変更します。

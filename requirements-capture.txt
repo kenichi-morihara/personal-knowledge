@@ -1,0 +1,4 @@
+-r requirements-mcp.txt
+uvicorn==0.54.0
+starlette==1.10.0
+python-multipart==0.0.32
