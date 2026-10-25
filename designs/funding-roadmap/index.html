@@ -148,6 +148,16 @@
 #funding-quest .q-mini-net[data-flow=income]{color:var(--q-income)}
 #funding-quest .q-mini-net[data-flow=expense]{color:var(--q-expense)}
 #funding-quest details.q-mini&gt;.q-mini-items{padding:0 12px 12px}
+
+/* Shape and spacing separate money cards from the preparation checklist. */
+#funding-quest .q-lanes.q-single-lane{grid-template-columns:minmax(0,1fr)}
+#funding-quest .q-lane-prep{padding:0 0 0 16px;border-left:2px dashed var(--q-line)}
+#funding-quest .q-lane-prep .q-task{border-radius:5px 14px 14px 5px;border-left:4px solid var(--q-income);box-shadow:none}
+#funding-quest .q-task&gt;summary{position:relative;padding-left:27px}
+#funding-quest .q-task&gt;summary:before{content:&#x27;&#x27;;position:absolute;left:0;top:4px;width:15px;height:15px;border:2px solid var(--q-income);border-radius:4px}
+#funding-quest .q-task[data-state=doing]&gt;summary:before{background:color-mix(in srgb,var(--q-income) 25%,transparent)}
+#funding-quest .q-task[data-state=done]&gt;summary:before{content:&#x27;✓&#x27;;background:var(--q-income);color:var(--q-card);font-size:12px;line-height:12px;text-align:center}
+@media(max-width:700px){#funding-quest .q-lane-prep{padding:12px 0 0;border-left:0;border-top:2px dashed var(--q-line)}}
 &lt;/style&gt;
 &lt;div id=&quot;funding-quest&quot; aria-label=&quot;クエスト風の資金ロードマップ&quot;&gt;
   &lt;div class=&quot;q-memory-photo&quot; role=&quot;img&quot; aria-label=&quot;ふたりがピースをしているイラスト&quot;&gt;&lt;/div&gt;
@@ -329,14 +339,12 @@
   [...groups.keys()].sort((a,b)=&gt;a===&#x27;undated&#x27;?1:b===&#x27;undated&#x27;?-1:a.localeCompare(b)).forEach(key=&gt;{
    const section=make(&#x27;section&#x27;,&#x27;q-month&#x27;);section.dataset.month=key;
    section.append(make(&#x27;h3&#x27;,&#x27;&#x27;,key===&#x27;undated&#x27;?&#x27;時期未定&#x27;:key.replace(&#x27;-&#x27;, &#x27;年&#x27;)+&#x27;月&#x27;));
-   const lanes=make(&#x27;div&#x27;,&#x27;q-lanes&#x27;);const money=make(&#x27;div&#x27;,&#x27;q-lane&#x27;);const prep=make(&#x27;div&#x27;,&#x27;q-lane&#x27;);
-   money.append(make(&#x27;h4&#x27;,&#x27;&#x27;,&#x27;お金&#x27;));prep.append(make(&#x27;h4&#x27;,&#x27;&#x27;,&#x27;準備タスク&#x27;));
+   const lanes=make(&#x27;div&#x27;,&#x27;q-lanes&#x27;);const money=make(&#x27;div&#x27;,&#x27;q-lane q-lane-money&#x27;);const prep=make(&#x27;div&#x27;,&#x27;q-lane q-lane-prep&#x27;);
+   money.setAttribute(&#x27;role&#x27;,&#x27;group&#x27;);money.setAttribute(&#x27;aria-label&#x27;,&#x27;収支と支払い&#x27;);prep.setAttribute(&#x27;role&#x27;,&#x27;group&#x27;);prep.setAttribute(&#x27;aria-label&#x27;,&#x27;準備タスク&#x27;);
    const g=groups.get(key);g.money.forEach(node=&gt;money.append(node));
-   if(!g.money.length)money.append(make(&#x27;p&#x27;,&#x27;q-empty&#x27;,&#x27;関連する支出・収入は未登録&#x27;));
    if(!demo&amp;&amp;g.money.length)money.prepend(make(&#x27;p&#x27;,&#x27;q-empty&#x27;,&#x27;この月のイベント配置は仮日程です。金額・期限は未確認。&#x27;));
    g.tasks.sort((a,b)=&gt;(a.date||&#x27;&#x27;).localeCompare(b.date||&#x27;&#x27;)).forEach(t=&gt;{const card=taskCard(t);card.open=openIds.has(t.id);prep.append(card);});
-   if(!g.tasks.length)prep.append(make(&#x27;p&#x27;,&#x27;q-empty&#x27;,&#x27;この月の準備タスクは未登録&#x27;));
-   lanes.append(money,prep);section.append(lanes);holder.append(section);
+   if(g.money.length)lanes.append(money);if(g.tasks.length)lanes.append(prep);lanes.classList.toggle(&#x27;q-single-lane&#x27;,!g.money.length||!g.tasks.length);section.append(lanes);holder.append(section);
   });
  }
  root.querySelector(&#x27;[data-task-add]&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{

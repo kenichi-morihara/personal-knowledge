@@ -136,6 +136,16 @@
 #funding-quest .q-mini-net[data-flow=income]{color:var(--q-income)}
 #funding-quest .q-mini-net[data-flow=expense]{color:var(--q-expense)}
 #funding-quest details.q-mini>.q-mini-items{padding:0 12px 12px}
+
+/* Shape and spacing separate money cards from the preparation checklist. */
+#funding-quest .q-lanes.q-single-lane{grid-template-columns:minmax(0,1fr)}
+#funding-quest .q-lane-prep{padding:0 0 0 16px;border-left:2px dashed var(--q-line)}
+#funding-quest .q-lane-prep .q-task{border-radius:5px 14px 14px 5px;border-left:4px solid var(--q-income);box-shadow:none}
+#funding-quest .q-task>summary{position:relative;padding-left:27px}
+#funding-quest .q-task>summary:before{content:'';position:absolute;left:0;top:4px;width:15px;height:15px;border:2px solid var(--q-income);border-radius:4px}
+#funding-quest .q-task[data-state=doing]>summary:before{background:color-mix(in srgb,var(--q-income) 25%,transparent)}
+#funding-quest .q-task[data-state=done]>summary:before{content:'✓';background:var(--q-income);color:var(--q-card);font-size:12px;line-height:12px;text-align:center}
+@media(max-width:700px){#funding-quest .q-lane-prep{padding:12px 0 0;border-left:0;border-top:2px dashed var(--q-line)}}
 </style>
 <div id="funding-quest" aria-label="クエスト風の資金ロードマップ">
   <div class="q-memory-photo" role="img" aria-label="ふたりがピースをしているイラスト"></div>
@@ -317,14 +327,12 @@
   [...groups.keys()].sort((a,b)=>a==='undated'?1:b==='undated'?-1:a.localeCompare(b)).forEach(key=>{
    const section=make('section','q-month');section.dataset.month=key;
    section.append(make('h3','',key==='undated'?'時期未定':key.replace('-', '年')+'月'));
-   const lanes=make('div','q-lanes');const money=make('div','q-lane');const prep=make('div','q-lane');
-   money.append(make('h4','','お金'));prep.append(make('h4','','準備タスク'));
+   const lanes=make('div','q-lanes');const money=make('div','q-lane q-lane-money');const prep=make('div','q-lane q-lane-prep');
+   money.setAttribute('role','group');money.setAttribute('aria-label','収支と支払い');prep.setAttribute('role','group');prep.setAttribute('aria-label','準備タスク');
    const g=groups.get(key);g.money.forEach(node=>money.append(node));
-   if(!g.money.length)money.append(make('p','q-empty','関連する支出・収入は未登録'));
    if(!demo&&g.money.length)money.prepend(make('p','q-empty','この月のイベント配置は仮日程です。金額・期限は未確認。'));
    g.tasks.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const card=taskCard(t);card.open=openIds.has(t.id);prep.append(card);});
-   if(!g.tasks.length)prep.append(make('p','q-empty','この月の準備タスクは未登録'));
-   lanes.append(money,prep);section.append(lanes);holder.append(section);
+   if(g.money.length)lanes.append(money);if(g.tasks.length)lanes.append(prep);lanes.classList.toggle('q-single-lane',!g.money.length||!g.tasks.length);section.append(lanes);holder.append(section);
   });
  }
  root.querySelector('[data-task-add]').addEventListener('click',()=>{
