@@ -118,7 +118,7 @@
 
 #funding-quest .q-month{border-top:2px solid var(--q-line);padding:20px 0 8px}
 #funding-quest .q-month&gt;h3{font-size:17px;margin-bottom:12px}
-#funding-quest .q-lanes{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
+#funding-quest .q-lanes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:20px}
 #funding-quest .q-lane{min-width:0}
 #funding-quest .q-lane&gt;h4{font-size:12px;letter-spacing:.08em;margin:0 0 10px;color:var(--q-muted)}
 #funding-quest .q-lane .q-minis{margin:0;padding:0;border:0}
@@ -168,13 +168,13 @@
 
 /* Shape and spacing separate money cards from the preparation checklist. */
 #funding-quest .q-lanes.q-single-lane{grid-template-columns:minmax(0,1fr)}
-#funding-quest .q-lane-prep{padding:0 0 0 16px;border-left:2px dashed var(--q-line)}
+#funding-quest .q-lane-money{padding:0 0 0 16px;border-left:2px dashed var(--q-line)}
 #funding-quest .q-lane-prep .q-task{border-radius:5px 14px 14px 5px;border-left:4px solid var(--q-income);box-shadow:none}
 #funding-quest .q-task&gt;summary{position:relative;padding-left:27px}
 #funding-quest .q-task&gt;summary:before{content:&#x27;&#x27;;position:absolute;left:0;top:4px;width:15px;height:15px;border:2px solid var(--q-income);border-radius:4px}
 #funding-quest .q-task[data-state=doing]&gt;summary:before{background:color-mix(in srgb,var(--q-income) 25%,transparent)}
 #funding-quest .q-task[data-state=done]&gt;summary:before{content:&#x27;✓&#x27;;background:var(--q-income);color:var(--q-card);font-size:12px;line-height:12px;text-align:center}
-@media(max-width:700px){#funding-quest .q-lane-prep{padding:12px 0 0;border-left:0;border-top:2px dashed var(--q-line)}}
+@media(max-width:700px){#funding-quest .q-lane-money{padding:12px 0 0;border-left:0;border-top:2px dashed var(--q-line)}}
 &lt;/style&gt;
 &lt;div id=&quot;funding-quest&quot; aria-label=&quot;クエスト風の資金ロードマップ&quot;&gt;
   &lt;div class=&quot;q-memory-photo&quot; role=&quot;img&quot; aria-label=&quot;ふたりがピースをしているイラスト&quot;&gt;&lt;/div&gt;
@@ -369,7 +369,7 @@
     money.prepend(make(&#x27;h4&#x27;,&#x27;&#x27;,&#x27;お金&#x27;));prep.prepend(make(&#x27;h4&#x27;,&#x27;&#x27;,&#x27;準備タスク&#x27;));
     if(!g.money.length)money.append(make(&#x27;p&#x27;,&#x27;q-empty&#x27;,&#x27;この月のお金の予定は未登録です。&#x27;));
     if(!g.tasks.length)prep.append(make(&#x27;p&#x27;,&#x27;q-empty&#x27;,&#x27;この月の準備タスクは未登録です。&#x27;));
-    lanes.append(money,prep);
+    lanes.append(prep,money);
    }
    section.append(lanes);holder.append(section);
   });
