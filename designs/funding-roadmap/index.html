@@ -88,6 +88,47 @@
  #funding-quest .q-photo-card figcaption{font-size:10px}
 }
 
+/* One financial meaning per color, shared by totals, monthly entries and breakdowns. */
+#funding-quest{--q-income:light-dark(#087567,#91e0ce);--q-income-bg:light-dark(#e8f7f1,#233f39);--q-expense:light-dark(#a64f20,#ffbc94);--q-expense-bg:light-dark(#fff0e5,#49352b);--q-balance:light-dark(#7550a1,#d6bdff);--q-balance-bg:light-dark(#f2ecfc,#3d314d);--q-shortfall:light-dark(#b92c56,#ffacc6);--q-shortfall-bg:light-dark(#ffe9f0,#502e3b)}
+#funding-quest .q-wallet&gt;[data-money-kind=balance]{--money-color:var(--q-balance);--money-bg:var(--q-balance-bg)}
+#funding-quest .q-wallet&gt;[data-money-kind=income]{--money-color:var(--q-income);--money-bg:var(--q-income-bg)}
+#funding-quest .q-wallet&gt;[data-money-kind=expense]{--money-color:var(--q-expense);--money-bg:var(--q-expense-bg)}
+#funding-quest .q-wallet&gt;[data-money-kind]{background:var(--money-bg);border-color:color-mix(in srgb,var(--money-color) 18%,var(--q-card))}
+#funding-quest .q-wallet&gt;[data-money-kind]:before{background:var(--money-color)}
+#funding-quest .q-wallet&gt;[data-money-kind] b{color:var(--money-color)}
+#funding-quest .q-wallet&gt;[data-money-kind] small{color:var(--money-color)}
+#funding-quest .q-money-legend{display:flex;align-items:center;gap:8px 15px;flex-wrap:wrap;margin:-7px 0 21px;font-size:11px}
+#funding-quest .q-money-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+#funding-quest .q-money-legend i{width:7px;height:7px;border-radius:50%;background:currentColor}
+#funding-quest .q-money-legend [data-tone=income]{color:var(--q-income)}
+#funding-quest .q-money-legend [data-tone=expense]{color:var(--q-expense)}
+#funding-quest .q-money-legend [data-tone=balance]{color:var(--q-balance)}
+#funding-quest .q-money-legend [data-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-mini-item{border-radius:7px;padding:4px 7px;gap:8px}
+#funding-quest .q-mini-item[data-flow=income]{color:var(--q-income);background:var(--q-income-bg)}
+#funding-quest .q-mini-item[data-flow=expense]{color:var(--q-expense);background:var(--q-expense-bg)}
+#funding-quest .q-mini-item[data-flow=income] .q-mini-name:before{content:&#x27;↗&#x27;}
+#funding-quest .q-mini-item[data-flow=expense] .q-mini-name:before{content:&#x27;↘&#x27;}
+#funding-quest .q-computed [data-cin]{color:var(--q-income)}
+#funding-quest .q-computed [data-cex]{color:var(--q-expense)}
+#funding-quest .q-level .q-stage-money&gt;[data-money]{color:var(--q-balance)}
+#funding-quest .q-level[data-short=true] .q-stage-money&gt;[data-money]{color:var(--q-shortfall)}
+#funding-quest .q-level .q-stage-money .q-cost b{color:var(--q-expense)}
+#funding-quest .q-level .q-breakdown-list [data-b-inc]{color:var(--q-income)}
+#funding-quest .q-level .q-breakdown-list [data-b-exp],#funding-quest .q-level .q-breakdown-list [data-b-need]{color:var(--q-expense)}
+#funding-quest .q-level .q-breakdown-list [data-money-tone=balance]{color:var(--q-balance)}
+#funding-quest .q-level .q-breakdown-list [data-money-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-level .q-breakdown-list [data-money-tone=unknown],#funding-quest .q-level .q-stage-money&gt;[data-money-tone=unknown]{color:var(--q-muted)}
+#funding-quest .q-level[data-short=true] .q-node{border-color:var(--q-shortfall)}
+#funding-quest .q-hero .q-amount{color:var(--q-shortfall)}
+#funding-quest .q-stage-actions [data-before]{color:var(--q-balance)}
+@media(max-width:540px){#funding-quest .q-money-legend{gap:7px 12px}}
+
+#funding-quest[data-money-state=balanced] .q-hero .q-amount{color:var(--q-balance)}
+#funding-quest[data-money-state=unknown] .q-hero .q-amount{color:var(--q-muted)}
+#funding-quest .q-stage-actions [data-before][data-money-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-stage-actions [data-before][data-money-tone=unknown]{color:var(--q-muted)}
+
 &lt;/style&gt;
 &lt;div id=&quot;funding-quest&quot; aria-label=&quot;クエスト風の資金ロードマップ&quot;&gt;
 &lt;header class=&quot;q-top&quot;&gt;&lt;div class=&quot;q-logo&quot;&gt;&lt;div class=&quot;q-emblem&quot; aria-hidden=&quot;true&quot;&gt;🧭&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;q-wordmark&quot;&gt;LIFE QUEST&lt;/div&gt;&lt;div class=&quot;q-caption&quot;&gt;ふたりで準備。ふたりで冒険。&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/header&gt;
@@ -100,7 +141,8 @@
 
 &lt;div class=&quot;q-map-heading&quot;&gt;&lt;span class=&quot;q-demo&quot; data-demo-label&gt;デモの冒険マップ&lt;/span&gt;&lt;label class=&quot;q-toggle cursor-interaction&quot;&gt;&lt;input type=&quot;checkbox&quot; data-demo checked&gt;デモ値&lt;/label&gt;&lt;/div&gt;
 &lt;section class=&quot;q-hero&quot; aria-live=&quot;polite&quot;&gt;&lt;div class=&quot;q-eyebrow&quot;&gt;YOUR NEXT CHAPTER · CANADA&lt;/div&gt;&lt;h2 class=&quot;q-title&quot; data-hero-title&gt;次の冒険まで、あと&lt;/h2&gt;&lt;div class=&quot;q-amount-row&quot;&gt;&lt;div class=&quot;q-amount&quot; data-gap&gt;&lt;/div&gt;&lt;small data-gap-suffix&gt;の資金が必要&lt;/small&gt;&lt;/div&gt;&lt;div class=&quot;q-progress-head&quot;&gt;&lt;span&gt;ゴール資金の確保見込み&lt;/span&gt;&lt;span data-progress-text&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;q-progress-track&quot; role=&quot;progressbar&quot; aria-label=&quot;ゴール資金の確保見込み&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;100&quot; data-progress&gt;&lt;div class=&quot;q-progress-fill&quot; data-fill&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;q-risk&quot;&gt;&lt;span class=&quot;q-risk-tag&quot; data-risk-label&gt;最初の難所&lt;/span&gt;&lt;span data-risk&gt;&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;
-&lt;div class=&quot;q-wallet&quot;&gt;&lt;div&gt;&lt;small&gt;手元資金 &lt;em&gt;仮&lt;/em&gt;&lt;/small&gt;&lt;b data-balance-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;small&gt;これからの収入&lt;/small&gt;&lt;b data-income-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;small&gt;生活費などの支出&lt;/small&gt;&lt;b data-expense-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;small&gt;クエストの必要額&lt;/small&gt;&lt;b data-goal-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;q-wallet&quot;&gt;&lt;div data-money-kind=&quot;balance&quot;&gt;&lt;small&gt;スタート残高 &lt;em&gt;仮&lt;/em&gt;&lt;/small&gt;&lt;b data-balance-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;div data-money-kind=&quot;income&quot;&gt;&lt;small&gt;これからの収入&lt;/small&gt;&lt;b data-income-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;div data-money-kind=&quot;expense&quot;&gt;&lt;small&gt;生活費などの支出&lt;/small&gt;&lt;b data-expense-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;div data-money-kind=&quot;expense&quot;&gt;&lt;small&gt;イベントの予定支出&lt;/small&gt;&lt;b data-goal-total&gt;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;q-money-legend&quot; aria-label=&quot;金額の色分け&quot;&gt;&lt;span data-tone=&quot;income&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;収入 ＋&lt;/span&gt;&lt;span data-tone=&quot;expense&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;支出 −&lt;/span&gt;&lt;span data-tone=&quot;balance&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;予定残高&lt;/span&gt;&lt;span data-tone=&quot;shortfall&quot;&gt;&lt;i aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;不足&lt;/span&gt;&lt;/div&gt;
 &lt;div class=&quot;q-map-heading&quot;&gt;&lt;h3&gt;冒険のロードマップ&lt;/h3&gt;&lt;span class=&quot;q-caption&quot; data-stage-count&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;div class=&quot;q-map&quot;&gt;&lt;div class=&quot;q-start&quot;&gt;&lt;div class=&quot;q-traveler&quot; aria-hidden=&quot;true&quot;&gt;🎒&lt;/div&gt;&lt;div&gt;ふたりのスタート地点&lt;small&gt;2026.10.25 · 資金を期限順につなぐ&lt;/small&gt;&lt;/div&gt;&lt;/div&gt;&lt;div data-levels&gt;&lt;/div&gt;&lt;/div&gt;
 &lt;div class=&quot;q-tip&quot;&gt;必要額に含む支払いは、生活費などの支出と二重計上しません。&lt;/div&gt;
@@ -169,7 +211,7 @@
   return{income,expense,rows};
  }
  const holder=root.querySelector(&#x27;[data-levels]&#x27;);
- DEFAULT_STAGES.forEach((item,i)=&gt;{const minis=document.createElement(&#x27;div&#x27;);minis.className=&#x27;q-minis&#x27;;minis.dataset.minis=i;holder.appendChild(minis);const el=document.createElement(&#x27;div&#x27;);el.className=&#x27;q-level&#x27;;el.dataset.index=i;el.innerHTML=`&lt;div class=&quot;q-route&quot;&gt;&lt;div class=&quot;q-node&quot; aria-hidden=&quot;true&quot;&gt;${item.icon}&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;q-stage&quot;&gt;&lt;details&gt;&lt;summary class=&quot;cursor-interaction&quot;&gt;&lt;div&gt;&lt;div class=&quot;q-stage-date&quot; data-date&gt;&lt;/div&gt;&lt;h3 class=&quot;q-stage-title&quot;&gt;${item.title}&lt;/h3&gt;&lt;span class=&quot;q-stage-badge&quot; data-badge&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;q-stage-money&quot;&gt;&lt;small data-money-label&gt;&lt;/small&gt;&lt;b data-money&gt;&lt;/b&gt;&lt;small class=&quot;q-cost&quot;&gt;イベントの費用 &lt;b data-cost&gt;&lt;/b&gt;&lt;/small&gt;&lt;/div&gt;&lt;/summary&gt;&lt;div class=&quot;q-details&quot;&gt;&lt;div class=&quot;q-fields&quot;&gt;&lt;label class=&quot;q-field&quot;&gt;この目標の必要額（万円）&lt;input type=&quot;number&quot; min=&quot;0&quot; step=&quot;1&quot; data-key=&quot;need&quot; aria-label=&quot;${item.title}の必要額&quot;&gt;&lt;/label&gt;&lt;/div&gt;&lt;div class=&quot;q-computed&quot;&gt;&lt;span&gt;この期間の収入 &lt;b data-cin&gt;&lt;/b&gt;&lt;/span&gt;&lt;span&gt;支出 &lt;b data-cex&gt;&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;details class=&quot;q-breakdown&quot;&gt;&lt;summary class=&quot;cursor-interaction&quot;&gt;金額の内訳&lt;/summary&gt;&lt;ul class=&quot;q-breakdown-list&quot;&gt;&lt;li&gt;前の地点の残り &lt;b data-b-prev&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;この期間の収入 &lt;b data-b-inc&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;この期間の支出 &lt;b data-b-exp&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;このイベントで使える資金 &lt;b data-b-avail&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;イベントの費用 &lt;b data-b-need&gt;&lt;/b&gt;&lt;/li&gt;&lt;li class=&quot;q-b-total&quot;&gt;支払った後の残り &lt;b data-b-after&gt;&lt;/b&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/details&gt;&lt;div class=&quot;q-stage-actions&quot;&gt;&lt;span data-before&gt;&lt;/span&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-add-income&gt;収入＋5万円で試算&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/details&gt;&lt;/div&gt;`;holder.appendChild(el);});
+ DEFAULT_STAGES.forEach((item,i)=&gt;{const minis=document.createElement(&#x27;div&#x27;);minis.className=&#x27;q-minis&#x27;;minis.dataset.minis=i;holder.appendChild(minis);const el=document.createElement(&#x27;div&#x27;);el.className=&#x27;q-level&#x27;;el.dataset.index=i;el.innerHTML=`&lt;div class=&quot;q-route&quot;&gt;&lt;div class=&quot;q-node&quot; aria-hidden=&quot;true&quot;&gt;${item.icon}&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;q-stage&quot;&gt;&lt;details&gt;&lt;summary class=&quot;cursor-interaction&quot;&gt;&lt;div&gt;&lt;div class=&quot;q-stage-date&quot; data-date&gt;&lt;/div&gt;&lt;h3 class=&quot;q-stage-title&quot;&gt;${item.title}&lt;/h3&gt;&lt;span class=&quot;q-stage-badge&quot; data-badge&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;q-stage-money&quot;&gt;&lt;small data-money-label&gt;&lt;/small&gt;&lt;b data-money&gt;&lt;/b&gt;&lt;small class=&quot;q-cost&quot;&gt;イベントの費用 &lt;b data-cost&gt;&lt;/b&gt;&lt;/small&gt;&lt;/div&gt;&lt;/summary&gt;&lt;div class=&quot;q-details&quot;&gt;&lt;div class=&quot;q-fields&quot;&gt;&lt;label class=&quot;q-field&quot;&gt;この目標の必要額（万円）&lt;input type=&quot;number&quot; min=&quot;0&quot; step=&quot;1&quot; data-key=&quot;need&quot; aria-label=&quot;${item.title}の必要額&quot;&gt;&lt;/label&gt;&lt;/div&gt;&lt;div class=&quot;q-computed&quot;&gt;&lt;span&gt;この期間の収入 &lt;b data-cin&gt;&lt;/b&gt;&lt;/span&gt;&lt;span&gt;支出 &lt;b data-cex&gt;&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;details class=&quot;q-breakdown&quot;&gt;&lt;summary class=&quot;cursor-interaction&quot;&gt;金額の内訳&lt;/summary&gt;&lt;ul class=&quot;q-breakdown-list&quot;&gt;&lt;li&gt;前の地点の残り &lt;b data-b-prev&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;この期間の収入 &lt;b data-b-inc&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;この期間の支出 &lt;b data-b-exp&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;このイベントで使える資金 &lt;b data-b-avail&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;イベントの費用 &lt;b data-b-need&gt;&lt;/b&gt;&lt;/li&gt;&lt;li class=&quot;q-b-total&quot;&gt;支払い後の予定残高 &lt;b data-b-after&gt;&lt;/b&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/details&gt;&lt;div class=&quot;q-stage-actions&quot;&gt;&lt;span data-before&gt;&lt;/span&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-add-income&gt;収入＋5万円で試算&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/details&gt;&lt;/div&gt;`;holder.appendChild(el);});
  function status(msg){root.querySelector(&#x27;[data-status]&#x27;).textContent=msg;}
  function render(){
   root.querySelector(&#x27;[data-demo]&#x27;).checked=demo;root.querySelector(&#x27;[data-balance]&#x27;).value=demo?balance/10000:&#x27;&#x27;;
@@ -186,7 +228,11 @@
    el.dataset.short=String(demo&amp;&amp;gap&gt;0);
    el.querySelector(&#x27;[data-date]&#x27;).textContent=demo?&#x27;期限 &#x27;+x.date:&#x27;期限 未確認&#x27;;
    el.querySelector(&#x27;[data-badge]&#x27;).textContent=!demo?&#x27;確認待ち&#x27;:first?.index===i?&#x27;最初に資金が不足&#x27;:gap&gt;0?&#x27;資金を準備しよう&#x27;:&#x27;資金を確保できる見込み&#x27;;
-   el.querySelector(&#x27;[data-money-label]&#x27;).textContent=!demo?&#x27;必要額&#x27;:gap?&#x27;この地点で不足&#x27;:&#x27;支払った後の残り&#x27;;
+   for(const [selector,value] of [[&#x27;[data-b-prev]&#x27;,prevCash],[&#x27;[data-b-avail]&#x27;,available],[&#x27;[data-b-after]&#x27;,cash],[&#x27;[data-before]&#x27;,available]]){
+    el.querySelector(selector).dataset.moneyTone=!demo?&#x27;unknown&#x27;:value&lt;0?&#x27;shortfall&#x27;:&#x27;balance&#x27;;
+   }
+   el.querySelector(&#x27;[data-money]&#x27;).dataset.moneyTone=!demo?&#x27;unknown&#x27;:gap?&#x27;shortfall&#x27;:&#x27;balance&#x27;;
+   el.querySelector(&#x27;[data-money-label]&#x27;).textContent=!demo?&#x27;必要額&#x27;:gap?&#x27;この地点で不足&#x27;:&#x27;支払い後の予定残高&#x27;;
    el.querySelector(&#x27;[data-money]&#x27;).textContent=demo?(gap?&#x27;−&#x27;+wan(gap):wan(cash)):&#x27;未確認&#x27;;
    el.querySelector(&#x27;[data-cost]&#x27;).textContent=demo?wan(x.need):&#x27;未確認&#x27;;
    const bd=el.querySelector(&#x27;.q-breakdown&#x27;);bd.hidden=!demo;
@@ -202,7 +248,8 @@
    const needInput=el.querySelector(&#x27;[data-key=&quot;need&quot;]&#x27;);needInput.disabled=!demo;if(document.activeElement!==needInput)needInput.value=demo?x.need/10000:&#x27;&#x27;;
    el.querySelector(&#x27;[data-add-income]&#x27;).disabled=!demo;
   });
-  root.querySelectorAll(&#x27;[data-minis]&#x27;).forEach((box,i)=&gt;{box.replaceChildren();box.hidden=!demo;if(!demo)return;(minisRows[i]||[]).forEach(row=&gt;{const md=document.createElement(&#x27;div&#x27;);md.className=&#x27;q-mini&#x27;;const lab=document.createElement(&#x27;div&#x27;);lab.className=&#x27;q-mini-label&#x27;;lab.textContent=row.label;md.appendChild(lab);const list=document.createElement(&#x27;ul&#x27;);list.className=&#x27;q-mini-items&#x27;;row.items.forEach(([name,a])=&gt;{const it=document.createElement(&#x27;li&#x27;);it.className=&#x27;q-mini-item&#x27;;it.dataset.flow=a&gt;=0?&#x27;income&#x27;:&#x27;expense&#x27;;const label=document.createElement(&#x27;span&#x27;);label.className=&#x27;q-mini-name&#x27;;label.textContent=name;const value=document.createElement(&#x27;strong&#x27;);value.className=&#x27;q-mini-value&#x27;;value.textContent=pwan(a);it.append(label,value);list.appendChild(it);});md.appendChild(list);box.appendChild(md);});});
+  root.querySelectorAll(&#x27;[data-minis]&#x27;).forEach((box,i)=&gt;{box.replaceChildren();box.hidden=!demo;if(!demo)return;(minisRows[i]||[]).forEach(row=&gt;{const md=document.createElement(&#x27;div&#x27;);md.className=&#x27;q-mini&#x27;;const lab=document.createElement(&#x27;div&#x27;);lab.className=&#x27;q-mini-label&#x27;;lab.textContent=row.label;md.appendChild(lab);const list=document.createElement(&#x27;ul&#x27;);list.className=&#x27;q-mini-items&#x27;;row.items.forEach(([name,a])=&gt;{const it=document.createElement(&#x27;li&#x27;);it.className=&#x27;q-mini-item&#x27;;it.dataset.flow=a&lt;0||Object.is(a,-0)?&#x27;expense&#x27;:&#x27;income&#x27;;const label=document.createElement(&#x27;span&#x27;);label.className=&#x27;q-mini-name&#x27;;label.textContent=name;const value=document.createElement(&#x27;strong&#x27;);value.className=&#x27;q-mini-value&#x27;;value.textContent=pwan(a);it.append(label,value);list.appendChild(it);});md.appendChild(list);box.appendChild(md);});});
+  root.dataset.moneyState=!demo?&#x27;unknown&#x27;:maxGap&gt;0?&#x27;shortfall&#x27;:&#x27;balanced&#x27;;
   root.querySelector(&#x27;[data-income-total]&#x27;).textContent=demo?&#x27;＋&#x27;+wan(tInc):&#x27;未確認&#x27;;
   root.querySelector(&#x27;[data-expense-total]&#x27;).textContent=demo?&#x27;−&#x27;+wan(tExp):&#x27;未確認&#x27;;
   root.querySelector(&#x27;[data-goal-total]&#x27;).textContent=demo?wan(tNeed):&#x27;未確認&#x27;;

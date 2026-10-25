@@ -76,6 +76,47 @@
  #funding-quest .q-photo-card figcaption{font-size:10px}
 }
 
+/* One financial meaning per color, shared by totals, monthly entries and breakdowns. */
+#funding-quest{--q-income:light-dark(#087567,#91e0ce);--q-income-bg:light-dark(#e8f7f1,#233f39);--q-expense:light-dark(#a64f20,#ffbc94);--q-expense-bg:light-dark(#fff0e5,#49352b);--q-balance:light-dark(#7550a1,#d6bdff);--q-balance-bg:light-dark(#f2ecfc,#3d314d);--q-shortfall:light-dark(#b92c56,#ffacc6);--q-shortfall-bg:light-dark(#ffe9f0,#502e3b)}
+#funding-quest .q-wallet>[data-money-kind=balance]{--money-color:var(--q-balance);--money-bg:var(--q-balance-bg)}
+#funding-quest .q-wallet>[data-money-kind=income]{--money-color:var(--q-income);--money-bg:var(--q-income-bg)}
+#funding-quest .q-wallet>[data-money-kind=expense]{--money-color:var(--q-expense);--money-bg:var(--q-expense-bg)}
+#funding-quest .q-wallet>[data-money-kind]{background:var(--money-bg);border-color:color-mix(in srgb,var(--money-color) 18%,var(--q-card))}
+#funding-quest .q-wallet>[data-money-kind]:before{background:var(--money-color)}
+#funding-quest .q-wallet>[data-money-kind] b{color:var(--money-color)}
+#funding-quest .q-wallet>[data-money-kind] small{color:var(--money-color)}
+#funding-quest .q-money-legend{display:flex;align-items:center;gap:8px 15px;flex-wrap:wrap;margin:-7px 0 21px;font-size:11px}
+#funding-quest .q-money-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+#funding-quest .q-money-legend i{width:7px;height:7px;border-radius:50%;background:currentColor}
+#funding-quest .q-money-legend [data-tone=income]{color:var(--q-income)}
+#funding-quest .q-money-legend [data-tone=expense]{color:var(--q-expense)}
+#funding-quest .q-money-legend [data-tone=balance]{color:var(--q-balance)}
+#funding-quest .q-money-legend [data-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-mini-item{border-radius:7px;padding:4px 7px;gap:8px}
+#funding-quest .q-mini-item[data-flow=income]{color:var(--q-income);background:var(--q-income-bg)}
+#funding-quest .q-mini-item[data-flow=expense]{color:var(--q-expense);background:var(--q-expense-bg)}
+#funding-quest .q-mini-item[data-flow=income] .q-mini-name:before{content:'↗'}
+#funding-quest .q-mini-item[data-flow=expense] .q-mini-name:before{content:'↘'}
+#funding-quest .q-computed [data-cin]{color:var(--q-income)}
+#funding-quest .q-computed [data-cex]{color:var(--q-expense)}
+#funding-quest .q-level .q-stage-money>[data-money]{color:var(--q-balance)}
+#funding-quest .q-level[data-short=true] .q-stage-money>[data-money]{color:var(--q-shortfall)}
+#funding-quest .q-level .q-stage-money .q-cost b{color:var(--q-expense)}
+#funding-quest .q-level .q-breakdown-list [data-b-inc]{color:var(--q-income)}
+#funding-quest .q-level .q-breakdown-list [data-b-exp],#funding-quest .q-level .q-breakdown-list [data-b-need]{color:var(--q-expense)}
+#funding-quest .q-level .q-breakdown-list [data-money-tone=balance]{color:var(--q-balance)}
+#funding-quest .q-level .q-breakdown-list [data-money-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-level .q-breakdown-list [data-money-tone=unknown],#funding-quest .q-level .q-stage-money>[data-money-tone=unknown]{color:var(--q-muted)}
+#funding-quest .q-level[data-short=true] .q-node{border-color:var(--q-shortfall)}
+#funding-quest .q-hero .q-amount{color:var(--q-shortfall)}
+#funding-quest .q-stage-actions [data-before]{color:var(--q-balance)}
+@media(max-width:540px){#funding-quest .q-money-legend{gap:7px 12px}}
+
+#funding-quest[data-money-state=balanced] .q-hero .q-amount{color:var(--q-balance)}
+#funding-quest[data-money-state=unknown] .q-hero .q-amount{color:var(--q-muted)}
+#funding-quest .q-stage-actions [data-before][data-money-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-stage-actions [data-before][data-money-tone=unknown]{color:var(--q-muted)}
+
 </style>
 <div id="funding-quest" aria-label="クエスト風の資金ロードマップ">
 <header class="q-top"><div class="q-logo"><div class="q-emblem" aria-hidden="true">🧭</div><div><div class="q-wordmark">LIFE QUEST</div><div class="q-caption">ふたりで準備。ふたりで冒険。</div></div></div></header>
@@ -88,7 +129,8 @@
 
 <div class="q-map-heading"><span class="q-demo" data-demo-label>デモの冒険マップ</span><label class="q-toggle cursor-interaction"><input type="checkbox" data-demo checked>デモ値</label></div>
 <section class="q-hero" aria-live="polite"><div class="q-eyebrow">YOUR NEXT CHAPTER · CANADA</div><h2 class="q-title" data-hero-title>次の冒険まで、あと</h2><div class="q-amount-row"><div class="q-amount" data-gap></div><small data-gap-suffix>の資金が必要</small></div><div class="q-progress-head"><span>ゴール資金の確保見込み</span><span data-progress-text></span></div><div class="q-progress-track" role="progressbar" aria-label="ゴール資金の確保見込み" aria-valuemin="0" aria-valuemax="100" data-progress><div class="q-progress-fill" data-fill></div></div><div class="q-risk"><span class="q-risk-tag" data-risk-label>最初の難所</span><span data-risk></span></div></section>
-<div class="q-wallet"><div><small>手元資金 <em>仮</em></small><b data-balance-total></b></div><div><small>これからの収入</small><b data-income-total></b></div><div><small>生活費などの支出</small><b data-expense-total></b></div><div><small>クエストの必要額</small><b data-goal-total></b></div></div>
+<div class="q-wallet"><div data-money-kind="balance"><small>スタート残高 <em>仮</em></small><b data-balance-total></b></div><div data-money-kind="income"><small>これからの収入</small><b data-income-total></b></div><div data-money-kind="expense"><small>生活費などの支出</small><b data-expense-total></b></div><div data-money-kind="expense"><small>イベントの予定支出</small><b data-goal-total></b></div></div>
+<div class="q-money-legend" aria-label="金額の色分け"><span data-tone="income"><i aria-hidden="true"></i>収入 ＋</span><span data-tone="expense"><i aria-hidden="true"></i>支出 −</span><span data-tone="balance"><i aria-hidden="true"></i>予定残高</span><span data-tone="shortfall"><i aria-hidden="true"></i>不足</span></div>
 <div class="q-map-heading"><h3>冒険のロードマップ</h3><span class="q-caption" data-stage-count></span></div>
 <div class="q-map"><div class="q-start"><div class="q-traveler" aria-hidden="true">🎒</div><div>ふたりのスタート地点<small>2026.10.25 · 資金を期限順につなぐ</small></div></div><div data-levels></div></div>
 <div class="q-tip">必要額に含む支払いは、生活費などの支出と二重計上しません。</div>
@@ -157,7 +199,7 @@
   return{income,expense,rows};
  }
  const holder=root.querySelector('[data-levels]');
- DEFAULT_STAGES.forEach((item,i)=>{const minis=document.createElement('div');minis.className='q-minis';minis.dataset.minis=i;holder.appendChild(minis);const el=document.createElement('div');el.className='q-level';el.dataset.index=i;el.innerHTML=`<div class="q-route"><div class="q-node" aria-hidden="true">${item.icon}</div></div><div class="q-stage"><details><summary class="cursor-interaction"><div><div class="q-stage-date" data-date></div><h3 class="q-stage-title">${item.title}</h3><span class="q-stage-badge" data-badge></span></div><div class="q-stage-money"><small data-money-label></small><b data-money></b><small class="q-cost">イベントの費用 <b data-cost></b></small></div></summary><div class="q-details"><div class="q-fields"><label class="q-field">この目標の必要額（万円）<input type="number" min="0" step="1" data-key="need" aria-label="${item.title}の必要額"></label></div><div class="q-computed"><span>この期間の収入 <b data-cin></b></span><span>支出 <b data-cex></b></span></div><details class="q-breakdown"><summary class="cursor-interaction">金額の内訳</summary><ul class="q-breakdown-list"><li>前の地点の残り <b data-b-prev></b></li><li>この期間の収入 <b data-b-inc></b></li><li>この期間の支出 <b data-b-exp></b></li><li>このイベントで使える資金 <b data-b-avail></b></li><li>イベントの費用 <b data-b-need></b></li><li class="q-b-total">支払った後の残り <b data-b-after></b></li></ul></details><div class="q-stage-actions"><span data-before></span><button type="button" class="cursor-interaction" data-add-income>収入＋5万円で試算</button></div></div></details></div>`;holder.appendChild(el);});
+ DEFAULT_STAGES.forEach((item,i)=>{const minis=document.createElement('div');minis.className='q-minis';minis.dataset.minis=i;holder.appendChild(minis);const el=document.createElement('div');el.className='q-level';el.dataset.index=i;el.innerHTML=`<div class="q-route"><div class="q-node" aria-hidden="true">${item.icon}</div></div><div class="q-stage"><details><summary class="cursor-interaction"><div><div class="q-stage-date" data-date></div><h3 class="q-stage-title">${item.title}</h3><span class="q-stage-badge" data-badge></span></div><div class="q-stage-money"><small data-money-label></small><b data-money></b><small class="q-cost">イベントの費用 <b data-cost></b></small></div></summary><div class="q-details"><div class="q-fields"><label class="q-field">この目標の必要額（万円）<input type="number" min="0" step="1" data-key="need" aria-label="${item.title}の必要額"></label></div><div class="q-computed"><span>この期間の収入 <b data-cin></b></span><span>支出 <b data-cex></b></span></div><details class="q-breakdown"><summary class="cursor-interaction">金額の内訳</summary><ul class="q-breakdown-list"><li>前の地点の残り <b data-b-prev></b></li><li>この期間の収入 <b data-b-inc></b></li><li>この期間の支出 <b data-b-exp></b></li><li>このイベントで使える資金 <b data-b-avail></b></li><li>イベントの費用 <b data-b-need></b></li><li class="q-b-total">支払い後の予定残高 <b data-b-after></b></li></ul></details><div class="q-stage-actions"><span data-before></span><button type="button" class="cursor-interaction" data-add-income>収入＋5万円で試算</button></div></div></details></div>`;holder.appendChild(el);});
  function status(msg){root.querySelector('[data-status]').textContent=msg;}
  function render(){
   root.querySelector('[data-demo]').checked=demo;root.querySelector('[data-balance]').value=demo?balance/10000:'';
@@ -174,7 +216,11 @@
    el.dataset.short=String(demo&&gap>0);
    el.querySelector('[data-date]').textContent=demo?'期限 '+x.date:'期限 未確認';
    el.querySelector('[data-badge]').textContent=!demo?'確認待ち':first?.index===i?'最初に資金が不足':gap>0?'資金を準備しよう':'資金を確保できる見込み';
-   el.querySelector('[data-money-label]').textContent=!demo?'必要額':gap?'この地点で不足':'支払った後の残り';
+   for(const [selector,value] of [['[data-b-prev]',prevCash],['[data-b-avail]',available],['[data-b-after]',cash],['[data-before]',available]]){
+    el.querySelector(selector).dataset.moneyTone=!demo?'unknown':value<0?'shortfall':'balance';
+   }
+   el.querySelector('[data-money]').dataset.moneyTone=!demo?'unknown':gap?'shortfall':'balance';
+   el.querySelector('[data-money-label]').textContent=!demo?'必要額':gap?'この地点で不足':'支払い後の予定残高';
    el.querySelector('[data-money]').textContent=demo?(gap?'−'+wan(gap):wan(cash)):'未確認';
    el.querySelector('[data-cost]').textContent=demo?wan(x.need):'未確認';
    const bd=el.querySelector('.q-breakdown');bd.hidden=!demo;
@@ -190,7 +236,8 @@
    const needInput=el.querySelector('[data-key="need"]');needInput.disabled=!demo;if(document.activeElement!==needInput)needInput.value=demo?x.need/10000:'';
    el.querySelector('[data-add-income]').disabled=!demo;
   });
-  root.querySelectorAll('[data-minis]').forEach((box,i)=>{box.replaceChildren();box.hidden=!demo;if(!demo)return;(minisRows[i]||[]).forEach(row=>{const md=document.createElement('div');md.className='q-mini';const lab=document.createElement('div');lab.className='q-mini-label';lab.textContent=row.label;md.appendChild(lab);const list=document.createElement('ul');list.className='q-mini-items';row.items.forEach(([name,a])=>{const it=document.createElement('li');it.className='q-mini-item';it.dataset.flow=a>=0?'income':'expense';const label=document.createElement('span');label.className='q-mini-name';label.textContent=name;const value=document.createElement('strong');value.className='q-mini-value';value.textContent=pwan(a);it.append(label,value);list.appendChild(it);});md.appendChild(list);box.appendChild(md);});});
+  root.querySelectorAll('[data-minis]').forEach((box,i)=>{box.replaceChildren();box.hidden=!demo;if(!demo)return;(minisRows[i]||[]).forEach(row=>{const md=document.createElement('div');md.className='q-mini';const lab=document.createElement('div');lab.className='q-mini-label';lab.textContent=row.label;md.appendChild(lab);const list=document.createElement('ul');list.className='q-mini-items';row.items.forEach(([name,a])=>{const it=document.createElement('li');it.className='q-mini-item';it.dataset.flow=a<0||Object.is(a,-0)?'expense':'income';const label=document.createElement('span');label.className='q-mini-name';label.textContent=name;const value=document.createElement('strong');value.className='q-mini-value';value.textContent=pwan(a);it.append(label,value);list.appendChild(it);});md.appendChild(list);box.appendChild(md);});});
+  root.dataset.moneyState=!demo?'unknown':maxGap>0?'shortfall':'balanced';
   root.querySelector('[data-income-total]').textContent=demo?'＋'+wan(tInc):'未確認';
   root.querySelector('[data-expense-total]').textContent=demo?'−'+wan(tExp):'未確認';
   root.querySelector('[data-goal-total]').textContent=demo?wan(tNeed):'未確認';
