@@ -103,6 +103,39 @@
 #funding-quest .q-stage-actions [data-before][data-money-tone=shortfall]{color:var(--q-shortfall)}
 #funding-quest .q-stage-actions [data-before][data-money-tone=unknown]{color:var(--q-muted)}
 
+
+#funding-quest .q-month{border-top:2px solid var(--q-line);padding:20px 0 8px}
+#funding-quest .q-month>h3{font-size:17px;margin-bottom:12px}
+#funding-quest .q-lanes{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
+#funding-quest .q-lane{min-width:0}
+#funding-quest .q-lane>h4{font-size:12px;letter-spacing:.08em;margin:0 0 10px;color:var(--q-muted)}
+#funding-quest .q-lane .q-minis{margin:0;padding:0;border:0}
+#funding-quest .q-lane .q-mini{grid-template-columns:1fr;margin-bottom:10px}
+#funding-quest .q-lane .q-level{grid-template-columns:1fr;margin:10px 0}
+#funding-quest .q-lane .q-route{display:none}
+#funding-quest .q-lane .q-stage>details>summary{flex-direction:column;align-items:stretch;gap:10px;padding:14px}
+#funding-quest .q-lane .q-stage-money{text-align:left;padding:0}
+#funding-quest .q-task{border:1px solid var(--q-line);border-radius:16px;padding:14px;background:var(--q-card);margin-bottom:10px;overflow-wrap:anywhere}
+#funding-quest .q-task summary{min-height:0;display:block;padding:0;cursor:pointer;font-size:14px;line-height:1.6}
+#funding-quest .q-task-meta{display:block;font-size:11px;color:var(--q-muted);margin-top:6px}
+#funding-quest .q-task[data-state=done] summary strong{text-decoration:line-through;opacity:.65}
+#funding-quest .q-task-edit{display:grid;gap:10px;margin-top:14px}
+#funding-quest .q-task-edit input,#funding-quest .q-task-edit select,#funding-quest .q-task-edit textarea{width:100%;min-width:0;border:1px solid var(--q-line);border-radius:9px;background:var(--q-card);color:var(--q-ink);padding:9px;font:inherit;font-size:13px}
+#funding-quest .q-task-edit label{font-size:11px;display:grid;gap:5px}
+#funding-quest .q-task-tools{margin:12px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--q-muted)}
+#funding-quest .q-empty{font-size:12px;color:var(--q-muted);padding:12px;border:1px dashed var(--q-line);border-radius:12px;line-height:1.7}
+@media(max-width:700px){#funding-quest .q-lanes{grid-template-columns:1fr;gap:14px}#funding-quest .q-month{padding-top:16px}#funding-quest .q-lane .q-stage-money{display:block}}
+
+/* Monthly cash flow starts collapsed; native details supports keyboard toggling. */
+#funding-quest details.q-mini{display:block;padding:0}
+#funding-quest details.q-mini>summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;min-height:48px;padding:12px 14px;cursor:pointer;list-style:none}
+#funding-quest details.q-mini>summary::-webkit-details-marker{display:none}
+#funding-quest details.q-mini>summary:after{content:'⌄';font-size:16px;color:var(--q-muted)}
+#funding-quest details.q-mini[open]>summary:after{content:'⌃'}
+#funding-quest .q-mini-net{margin-left:auto;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#funding-quest .q-mini-net[data-flow=income]{color:var(--q-income)}
+#funding-quest .q-mini-net[data-flow=expense]{color:var(--q-expense)}
+#funding-quest details.q-mini>.q-mini-items{padding:0 12px 12px}
 </style>
 <div id="funding-quest" aria-label="クエスト風の資金ロードマップ">
   <div class="q-memory-photo" role="img" aria-label="ふたりがピースをしているイラスト"></div>
@@ -118,7 +151,7 @@
 <div class="q-wallet"><div data-money-kind="balance"><small>スタート残高 <em>仮</em></small><b data-balance-total></b></div><div data-money-kind="income"><small>これからの収入</small><b data-income-total></b></div><div data-money-kind="expense"><small>生活費などの支出</small><b data-expense-total></b></div><div data-money-kind="expense"><small>イベントの予定支出</small><b data-goal-total></b></div></div>
 <div class="q-money-legend" aria-label="金額の色分け"><span data-tone="income"><i aria-hidden="true"></i>収入 ＋</span><span data-tone="expense"><i aria-hidden="true"></i>支出 −</span><span data-tone="balance"><i aria-hidden="true"></i>予定残高</span><span data-tone="shortfall"><i aria-hidden="true"></i>不足</span></div>
 <div class="q-map-heading"><h3>冒険のロードマップ</h3><span class="q-caption" data-stage-count></span></div>
-<div class="q-map"><div class="q-start"><div class="q-traveler" aria-hidden="true">🎒</div><div>ふたりのスタート地点<small>2026.10.25 · 資金を期限順につなぐ</small></div></div><div data-levels></div></div>
+<div class="q-task-tools"><button type="button" data-task-add>＋ 準備タスク</button><span>お金と準備を同じ月で確認 · 予定日は公式の申請期限とは別です</span></div><div class="q-map"><div class="q-start"><div class="q-traveler" aria-hidden="true">🎒</div><div>ふたりのスタート地点<small>2026.10.25 · 資金を期限順につなぐ</small></div></div><div data-levels></div></div>
 <div class="q-tip">必要額に含む支払いは、生活費などの支出と二重計上しません。</div>
 <div class="q-bottom"><span data-data-note>手元資金以外の金額・期限はすべてデモ</span><button type="button" class="cursor-interaction" data-balance-toggle aria-expanded="false">手元資金と毎月の収支を調整</button></div>
 <div class="q-setting" data-balance-panel hidden>
@@ -161,6 +194,11 @@
  let balance=300000,demo=true;
  let stages=DEFAULT_STAGES.map(x=>({...x}));
  let config={...DEFAULT_CONFIG};
+ const TASK_STATES={todo:'○ 未着手',doing:'◐ 進行中',done:'✓ 完了'};
+ const DEFAULT_TASKS=[{id:'canada-visa',title:'カナダのビザ申請',date:null,state:'todo',event:'move-canada',note:'ビザの種類・申請条件・公式期限は未確認。まず確認する。'}];
+ let tasks=DEFAULT_TASKS.map(t=>({...t}));
+ const levelNodes=[];const miniNodes=[];
+
  const wan=n=>{const v=Math.round(n/10000*10)/10;const s=Number.isInteger(v)?String(v):v.toFixed(1);return s+'万円';};
  const pwan=n=>(n<0?'−':'＋')+wan(Math.abs(n));
  const mwan=n=>(n<0?'−':'')+wan(Math.abs(n));
@@ -176,7 +214,7 @@
    const ym=y+'-'+String(m).padStart(2,'0');
    const fd=os<ms?1:new Date(os).getUTCDate()+1,ld=oe>=me?dim:new Date(oe).getUTCDate();
    const label=days>=dim?y+'年'+m+'月':y+'年'+m+'月'+fd+'日〜'+ld+'日';
-   const row={label,items:[]};
+   const row={label,month:ym,items:[]};
    if(config.incomeStart<=ym&&ym<=config.incomeEnd){const a=config.income*w;income+=a;row.items.push(['給与（本人のみ）',a]);}
    if(config.incomeStart<=ym&&ym<=config.incomeEnd){const a=config.living*w;expense+=a;row.items.push(['生活費（食費+雑費）',-a]);}
    if(config.incomeStart<=ym&&ym<=config.rentUntil){const a=config.rent*w;expense+=a;row.items.push(['家賃（光熱込み）',-a]);}
@@ -186,14 +224,16 @@
   return{income,expense,rows};
  }
  const holder=root.querySelector('[data-levels]');
- DEFAULT_STAGES.forEach((item,i)=>{const minis=document.createElement('div');minis.className='q-minis';minis.dataset.minis=i;holder.appendChild(minis);const el=document.createElement('div');el.className='q-level';el.dataset.index=i;el.innerHTML=`<div class="q-route"><div class="q-node" aria-hidden="true">${item.icon}</div></div><div class="q-stage"><details><summary class="cursor-interaction"><div><div class="q-stage-date" data-date></div><h3 class="q-stage-title">${item.title}</h3><span class="q-stage-badge" data-badge></span></div><div class="q-stage-money"><small data-money-label></small><b data-money></b><small class="q-cost">イベントの費用 <b data-cost></b></small></div></summary><div class="q-details"><div class="q-fields"><label class="q-field">この目標の必要額（万円）<input type="number" min="0" step="1" data-key="need" aria-label="${item.title}の必要額"></label></div><div class="q-computed"><span>この期間の収入 <b data-cin></b></span><span>支出 <b data-cex></b></span></div><details class="q-breakdown"><summary class="cursor-interaction">金額の内訳</summary><ul class="q-breakdown-list"><li>前の地点の残り <b data-b-prev></b></li><li>この期間の収入 <b data-b-inc></b></li><li>この期間の支出 <b data-b-exp></b></li><li>このイベントで使える資金 <b data-b-avail></b></li><li>イベントの費用 <b data-b-need></b></li><li class="q-b-total">支払い後の予定残高 <b data-b-after></b></li></ul></details><div class="q-stage-actions"><span data-before></span><button type="button" class="cursor-interaction" data-add-income>収入＋5万円で試算</button></div></div></details></div>`;holder.appendChild(el);});
+ DEFAULT_STAGES.forEach((item,i)=>{const minis=document.createElement('div');minis.className='q-minis';minis.dataset.minis=i;holder.appendChild(minis);miniNodes.push(minis);const el=document.createElement('div');el.className='q-level';el.dataset.index=i;el.innerHTML=`<div class="q-route"><div class="q-node" aria-hidden="true">${item.icon}</div></div><div class="q-stage"><details><summary class="cursor-interaction"><div><div class="q-stage-date" data-date></div><h3 class="q-stage-title">${item.title}</h3><span class="q-stage-badge" data-badge></span></div><div class="q-stage-money"><small data-money-label></small><b data-money></b><small class="q-cost">イベントの費用 <b data-cost></b></small></div></summary><div class="q-details"><div class="q-fields"><label class="q-field">この目標の必要額（万円）<input type="number" min="0" step="1" data-key="need" aria-label="${item.title}の必要額"></label></div><div class="q-computed"><span>この期間の収入 <b data-cin></b></span><span>支出 <b data-cex></b></span></div><details class="q-breakdown"><summary class="cursor-interaction">金額の内訳</summary><ul class="q-breakdown-list"><li>前の地点の残り <b data-b-prev></b></li><li>この期間の収入 <b data-b-inc></b></li><li>この期間の支出 <b data-b-exp></b></li><li>このイベントで使える資金 <b data-b-avail></b></li><li>イベントの費用 <b data-b-need></b></li><li class="q-b-total">支払い後の予定残高 <b data-b-after></b></li></ul></details><div class="q-stage-actions"><span data-before></span><button type="button" class="cursor-interaction" data-add-income>収入＋5万円で試算</button></div></div></details></div>`;holder.appendChild(el);levelNodes.push(el);});
  function status(msg){root.querySelector('[data-status]').textContent=msg;}
  function render(){
+  levelNodes.forEach(n=>holder.append(n));
+  miniNodes.forEach(n=>holder.append(n));
   root.querySelector('[data-demo]').checked=demo;root.querySelector('[data-balance]').value=demo?balance/10000:'';
   root.querySelectorAll('[data-m]').forEach(inp=>{if(document.activeElement!==inp)inp.value=demo?(inp.type==='month'?config[inp.dataset.m]:config[inp.dataset.m]/10000):'';inp.disabled=!demo;});
   root.querySelector('[data-balance-total]').textContent=demo?wan(balance):'未確認';
   let prev=START,cash=balance,maxGap=0,first=null,funded=0,tInc=0,tExp=0,tNeed=0;const minisRows=[];
-  root.querySelectorAll('.q-level').forEach((el,i)=>{
+  levelNodes.forEach((el,i)=>{
    const x=stages[i],c=calcStage(prev,x.date);prev=x.date;minisRows[i]=c.rows;
    const prevCash=cash;const available=cash+c.income-c.expense;cash=available-x.need;
    const gap=Math.max(0,-cash);maxGap=Math.max(maxGap,gap);
@@ -223,7 +263,9 @@
    const needInput=el.querySelector('[data-key="need"]');needInput.disabled=!demo;if(document.activeElement!==needInput)needInput.value=demo?x.need/10000:'';
    el.querySelector('[data-add-income]').disabled=!demo;
   });
-  root.querySelectorAll('[data-minis]').forEach((box,i)=>{box.replaceChildren();box.hidden=!demo;if(!demo)return;(minisRows[i]||[]).forEach(row=>{const md=document.createElement('div');md.className='q-mini';const lab=document.createElement('div');lab.className='q-mini-label';lab.textContent=row.label;md.appendChild(lab);const list=document.createElement('ul');list.className='q-mini-items';row.items.forEach(([name,a])=>{const it=document.createElement('li');it.className='q-mini-item';it.dataset.flow=a<0||Object.is(a,-0)?'expense':'income';const label=document.createElement('span');label.className='q-mini-name';label.textContent=name;const value=document.createElement('strong');value.className='q-mini-value';value.textContent=pwan(a);it.append(label,value);list.appendChild(it);});md.appendChild(list);box.appendChild(md);});});
+  const openMonths=new Set([...holder.querySelectorAll('details.q-mini[open]')].map(n=>n.dataset.period));
+  miniNodes.forEach((box,i)=>{box.replaceChildren();box.hidden=!demo;if(!demo)return;(minisRows[i]||[]).forEach(row=>{const md=document.createElement('details');md.className='q-mini';md.dataset.month=row.month;md.dataset.period=row.label;md.open=openMonths.has(row.label);const summary=document.createElement('summary');summary.className='q-mini-summary';const lab=document.createElement('span');lab.className='q-mini-label';lab.textContent=row.label;const net=row.items.reduce((sum,[,amount])=>sum+amount,0);const total=document.createElement('strong');total.className='q-mini-net';total.dataset.flow=net<0?'expense':'income';total.textContent='収支 '+pwan(net);summary.append(lab,total);md.appendChild(summary);const list=document.createElement('ul');list.className='q-mini-items';row.items.forEach(([name,a])=>{const it=document.createElement('li');it.className='q-mini-item';it.dataset.flow=a<0||Object.is(a,-0)?'expense':'income';const label=document.createElement('span');label.className='q-mini-name';label.textContent=name;const value=document.createElement('strong');value.className='q-mini-value';value.textContent=pwan(a);it.append(label,value);list.appendChild(it);});md.appendChild(list);box.appendChild(md);});});
+  renderRoadmap();
   root.dataset.moneyState=!demo?'unknown':maxGap>0?'shortfall':'balanced';
   root.querySelector('[data-income-total]').textContent=demo?'＋'+wan(tInc):'未確認';
   root.querySelector('[data-expense-total]').textContent=demo?'−'+wan(tExp):'未確認';
@@ -240,10 +282,61 @@
   root.querySelector('[data-stage-count]').textContent=demo?`${funded} / ${stages.length} 地点で資金確保の見込み`:'金額と期限を確認待ち';
   root.querySelector('[data-data-note]').textContent=demo?'手元資金以外の金額・期限はすべてデモ':'未確認の金額を0円として計算しません';
  }
- function snapshotPayload(){return{v:2,demo,balance,config:{...config},needs:stages.map(s=>s.need)};}
+
+ function cleanTasks(items){
+  const ids=new Set();
+  return items.filter(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&t.title.trim()&&!ids.has(t.id)&&ids.add(t.id)).map(t=>({id:t.id,title:t.title.slice(0,200),date:validDate(t.date)?t.date:null,state:Object.hasOwn(TASK_STATES,t.state)?t.state:'todo',event:stages.some(s=>s.id===t.event)?t.event:'',note:typeof t.note==='string'?t.note.slice(0,4000):''}));
+ }
+ function validDate(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;}
+ function make(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+ function taskCard(task){
+  const card=make('details','q-task');card.dataset.task=task.id;card.dataset.state=task.state;
+  const summary=make('summary');summary.append(make('strong','',task.title));
+  const related=stages.find(s=>s.id===task.event);
+  summary.append(make('span','q-task-meta',TASK_STATES[task.state]+' · '+(task.date?'予定 '+task.date:'時期未定')+(related?' · 関連：'+related.title:'')));
+  card.append(summary);
+  const form=make('form','q-task-edit');
+  function field(label,key,tag,type){const l=make('label','',label);const input=make(tag);input.name=key;if(type)input.type=type;l.append(input);form.append(l);return input;}
+  const title=field('タスク名','title','input','text');title.required=true;title.maxLength=200;title.value=task.title;
+  const date=field('予定日（未確認なら空欄）','date','input','date');date.value=task.date||'';
+  const state=field('状態','state','select');Object.entries(TASK_STATES).forEach(([value,label])=>{const o=make('option','',label);o.value=value;state.append(o);});state.value=task.state;
+  const event=field('関連するお金のイベント','event','select');const none=make('option','','関連なし');none.value='';event.append(none);stages.forEach(s=>{const o=make('option','',s.title);o.value=s.id;event.append(o);});event.value=task.event;
+  const note=field('メモ・必要書類・確認した出典','note','textarea');note.rows=3;note.maxLength=4000;note.value=task.note;
+  const actions=make('div','q-task-tools');const saveButton=make('button','','保存');saveButton.type='button';const remove=make('button','','削除');remove.type='button';actions.append(saveButton,remove);form.append(actions);
+  saveButton.addEventListener('click',e=>{e.preventDefault();if(!title.value.trim())return;Object.assign(task,{title:title.value.trim(),date:validDate(date.value)?date.value:null,state:state.value,event:event.value,note:note.value});render();save(false);status('タスクを保存しました（このブラウザ内）。ファイルへの保存は db.json のダウンロードから。');});
+  remove.addEventListener('click',()=>{tasks=tasks.filter(t=>t.id!==task.id);render();save(false);status('タスクを削除しました（このブラウザ内）。');});
+  card.append(form);return card;
+ }
+ function renderRoadmap(){
+  const openIds=new Set([...holder.querySelectorAll('.q-task[open]')].map(n=>n.dataset.task));
+  const groups=new Map();
+  function group(key){if(!groups.has(key))groups.set(key,{money:[],tasks:[]});return groups.get(key);}
+  levelNodes.forEach((node,i)=>{[...miniNodes[i].children].forEach(row=>group(row.dataset.month).money.push(row));group(stages[i].date.slice(0,7)).money.push(node);});
+  tasks.forEach(t=>group(t.date?t.date.slice(0,7):'undated').tasks.push(t));
+  holder.replaceChildren();
+  [...groups.keys()].sort((a,b)=>a==='undated'?1:b==='undated'?-1:a.localeCompare(b)).forEach(key=>{
+   const section=make('section','q-month');section.dataset.month=key;
+   section.append(make('h3','',key==='undated'?'時期未定':key.replace('-', '年')+'月'));
+   const lanes=make('div','q-lanes');const money=make('div','q-lane');const prep=make('div','q-lane');
+   money.append(make('h4','','お金'));prep.append(make('h4','','準備タスク'));
+   const g=groups.get(key);g.money.forEach(node=>money.append(node));
+   if(!g.money.length)money.append(make('p','q-empty','関連する支出・収入は未登録'));
+   if(!demo&&g.money.length)money.prepend(make('p','q-empty','この月のイベント配置は仮日程です。金額・期限は未確認。'));
+   g.tasks.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const card=taskCard(t);card.open=openIds.has(t.id);prep.append(card);});
+   if(!g.tasks.length)prep.append(make('p','q-empty','この月の準備タスクは未登録'));
+   lanes.append(money,prep);section.append(lanes);holder.append(section);
+  });
+ }
+ root.querySelector('[data-task-add]').addEventListener('click',()=>{
+  const task={id:crypto.randomUUID(),title:'新しい準備タスク',date:null,state:'todo',event:'',note:''};tasks.push(task);render();save(false);
+  const card=[...holder.querySelectorAll('.q-task')].find(n=>n.dataset.task===task.id);card.open=true;card.scrollIntoView({block:'center',behavior:'smooth'});card.querySelector('input').focus();
+ });
+
+ function snapshotPayload(){return{v:2,demo,balance,config:{...config},needs:stages.map(s=>s.need),tasks:tasks.map(t=>({...t}))};}
  function save(notify){const p=snapshotPayload();try{localStorage.setItem(LS_KEY,JSON.stringify(p));}catch{}window.openai?.setWidgetState?.({modelContent:{design:'クエスト風の資金ロードマップ',balanceAssumption:balance,demoOnly:demo},privateContent:{design:'quest',...p}})?.catch?.(()=>{});if(notify)status('保存しました（このブラウザ内のみ）。db.json に書き出す場合は「db.jsonをダウンロード」で上書きしてください。');}
  function applyPayload(p){
   if(!p||typeof p!=='object')return false;
+  if(Array.isArray(p.tasks))tasks=cleanTasks(p.tasks);
   if(typeof p.demo==='boolean')demo=p.demo;
   if(Number.isFinite(p.balance)&&p.balance>=0)balance=p.balance;
   if(p.config&&typeof p.config==='object')Object.keys(DEFAULT_CONFIG).forEach(k=>{const v=p.config[k];if(typeof DEFAULT_CONFIG[k]==='number'){if(Number.isFinite(v)&&v>=0)config[k]=v;}else if(typeof v==='string'&&/^\d{4}-\d{2}$/.test(v))config[k]=v;});
@@ -252,6 +345,7 @@
  }
  function applyDb(db){
   if(!db||!Array.isArray(db.events))return false;
+  if(Array.isArray(db.tasks))tasks=cleanTasks(db.tasks);
   db.events.forEach(e=>{const s=stages.find(x=>x.id===(e.key||e.id));if(s&&Number.isFinite(e.amount_wan)&&e.amount_wan>=0)s.need=e.amount_wan*10000;});
   const mo=db.monthly;if(mo&&typeof mo==='object'){const c={};['income','living','rent','canada'].forEach(k=>{if(Number.isFinite(mo[k])&&mo[k]>=0)c[k]=mo[k]*10000;});['rentUntil','canadaStart','canadaEnd','incomeStart','incomeEnd'].forEach(k=>{const key=k==='rentUntil'?'rent_until':k;if(typeof mo[key]==='string'&&/^\d{4}-\d{2}$/.test(mo[key]))c[k]=mo[key];});Object.assign(config,c);}
   return true;
@@ -267,11 +361,11 @@
  holder.addEventListener('click',e=>{const button=e.target.closest('[data-add-income]');if(!button||!demo)return;config.income+=50000;render();save(false);status('毎月の収入を5万円増やして試算しました。実際の収入登録は行っていません。');});
  root.querySelector('[data-save]').addEventListener('click',()=>save(true));
  root.querySelector('[data-export]').addEventListener('click',()=>{
-  const db={version:2,updated_at:new Date().toISOString().slice(0,10),monthly:{income:config.income/10000,living:config.living/10000,rent:config.rent/10000,rent_until:config.rentUntil,canada:config.canada/10000,canada_start:config.canadaStart,canada_end:config.canadaEnd,income_start:config.incomeStart,income_end:config.incomeEnd,unit:'万円'},events:stages.map(s=>({id:s.id,date:s.date,title:s.title,amount_wan:s.need/10000}))};
+  const db={version:2,updated_at:new Date().toISOString().slice(0,10),monthly:{income:config.income/10000,living:config.living/10000,rent:config.rent/10000,rent_until:config.rentUntil,canada:config.canada/10000,canada_start:config.canadaStart,canada_end:config.canadaEnd,income_start:config.incomeStart,income_end:config.incomeEnd,unit:'万円'},tasks:tasks.map(t=>({...t})),events:stages.map(s=>({id:s.id,date:s.date,title:s.title,amount_wan:s.need/10000}))};
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='funding-db.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
   status('funding-db.json をダウンロードしました。designs/funding-roadmap/db.json に上書きすると次回からの初期値になります。');
  });
- root.querySelector('[data-reset]').addEventListener('click',()=>{try{localStorage.removeItem(LS_KEY);}catch{}stages=DEFAULT_STAGES.map(x=>({...x}));config={...DEFAULT_CONFIG};balance=300000;render();status('初期値に戻しました。');});
+ root.querySelector('[data-reset]').addEventListener('click',()=>{try{localStorage.removeItem(LS_KEY);}catch{}stages=DEFAULT_STAGES.map(x=>({...x}));config={...DEFAULT_CONFIG};tasks=DEFAULT_TASKS.map(t=>({...t}));balance=300000;render();save(false);status('初期値に戻しました。');});
  root.querySelector('[data-balance-toggle]').addEventListener('click',e=>{const panel=root.querySelector('[data-balance-panel]');panel.hidden=!panel.hidden;e.currentTarget.setAttribute('aria-expanded',String(!panel.hidden));});
  window.addEventListener('openai:set_globals',e=>{if(e.detail?.globals?.widgetState){applyPayload(e.detail.globals.widgetState.privateContent);render();}});
  render();
