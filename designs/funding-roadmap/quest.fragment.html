@@ -137,6 +137,23 @@
 #funding-quest .q-mini-net[data-flow=expense]{color:var(--q-expense)}
 #funding-quest details.q-mini>.q-mini-items{padding:0 12px 12px}
 
+/* Event cards lead with their outgoing cash flow; remaining balance is secondary. */
+#funding-quest .q-stage-money [data-money][data-money-tone=expense]{color:var(--q-expense)}
+#funding-quest .q-stage-money .q-cost{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin-top:8px;font-size:11px;color:var(--q-muted)}
+#funding-quest .q-stage-money .q-cost b{font-size:14px}
+#funding-quest .q-stage-money [data-cost][data-money-tone=balance]{color:var(--q-balance)}
+#funding-quest .q-stage-money [data-cost][data-money-tone=shortfall]{color:var(--q-shortfall)}
+#funding-quest .q-stage-money [data-cost][data-money-tone=unknown]{color:var(--q-muted)}
+
+/* Align monthly cash flow and event amounts on the right at every width. */
+#funding-quest details.q-mini>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;justify-content:start;gap:5px 12px;padding:12px 14px}
+#funding-quest details.q-mini>summary .q-mini-label{grid-column:1;grid-row:1}
+#funding-quest details.q-mini>summary .q-mini-net{grid-column:1;grid-row:2;margin-left:0;justify-self:end;text-align:right}
+#funding-quest details.q-mini>summary:after{grid-column:2;grid-row:1/3;align-self:center}
+#funding-quest details.q-mini>.q-mini-items{padding-left:14px;padding-right:14px}
+#funding-quest .q-lane .q-stage-money{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:3px;padding:0}
+#funding-quest .q-lane .q-stage-money .q-cost{justify-content:flex-end;text-align:right}
+
 /* Shape and spacing separate money cards from the preparation checklist. */
 #funding-quest .q-lanes.q-single-lane{grid-template-columns:minmax(0,1fr)}
 #funding-quest .q-lane-prep{padding:0 0 0 16px;border-left:2px dashed var(--q-line)}
@@ -234,7 +251,7 @@
   return{income,expense,rows};
  }
  const holder=root.querySelector('[data-levels]');
- DEFAULT_STAGES.forEach((item,i)=>{const minis=document.createElement('div');minis.className='q-minis';minis.dataset.minis=i;holder.appendChild(minis);miniNodes.push(minis);const el=document.createElement('div');el.className='q-level';el.dataset.index=i;el.innerHTML=`<div class="q-route"><div class="q-node" aria-hidden="true">${item.icon}</div></div><div class="q-stage"><details><summary class="cursor-interaction"><div><div class="q-stage-date" data-date></div><h3 class="q-stage-title">${item.title}</h3><span class="q-stage-badge" data-badge></span></div><div class="q-stage-money"><small data-money-label></small><b data-money></b><small class="q-cost">イベントの費用 <b data-cost></b></small></div></summary><div class="q-details"><div class="q-fields"><label class="q-field">この目標の必要額（万円）<input type="number" min="0" step="1" data-key="need" aria-label="${item.title}の必要額"></label></div><div class="q-computed"><span>この期間の収入 <b data-cin></b></span><span>支出 <b data-cex></b></span></div><details class="q-breakdown"><summary class="cursor-interaction">金額の内訳</summary><ul class="q-breakdown-list"><li>前の地点の残り <b data-b-prev></b></li><li>この期間の収入 <b data-b-inc></b></li><li>この期間の支出 <b data-b-exp></b></li><li>このイベントで使える資金 <b data-b-avail></b></li><li>イベントの費用 <b data-b-need></b></li><li class="q-b-total">支払い後の予定残高 <b data-b-after></b></li></ul></details><div class="q-stage-actions"><span data-before></span><button type="button" class="cursor-interaction" data-add-income>収入＋5万円で試算</button></div></div></details></div>`;holder.appendChild(el);levelNodes.push(el);});
+ DEFAULT_STAGES.forEach((item,i)=>{const minis=document.createElement('div');minis.className='q-minis';minis.dataset.minis=i;holder.appendChild(minis);miniNodes.push(minis);const el=document.createElement('div');el.className='q-level';el.dataset.index=i;el.innerHTML=`<div class="q-route"><div class="q-node" aria-hidden="true">${item.icon}</div></div><div class="q-stage"><details><summary class="cursor-interaction"><div><div class="q-stage-date" data-date></div><h3 class="q-stage-title">${item.title}</h3><span class="q-stage-badge" data-badge></span></div><div class="q-stage-money"><small data-money-label></small><b data-money></b><small class="q-cost">支払い後の予定残高 <b data-cost></b></small></div></summary><div class="q-details"><div class="q-fields"><label class="q-field">この目標の必要額（万円）<input type="number" min="0" step="1" data-key="need" aria-label="${item.title}の必要額"></label></div><div class="q-computed"><span>この期間の収入 <b data-cin></b></span><span>支出 <b data-cex></b></span></div><details class="q-breakdown"><summary class="cursor-interaction">金額の内訳</summary><ul class="q-breakdown-list"><li>前の地点の残り <b data-b-prev></b></li><li>この期間の収入 <b data-b-inc></b></li><li>この期間の支出 <b data-b-exp></b></li><li>このイベントで使える資金 <b data-b-avail></b></li><li>イベントの費用 <b data-b-need></b></li><li class="q-b-total">支払い後の予定残高 <b data-b-after></b></li></ul></details><div class="q-stage-actions"><span data-before></span><button type="button" class="cursor-interaction" data-add-income>収入＋5万円で試算</button></div></div></details></div>`;holder.appendChild(el);levelNodes.push(el);});
  function status(msg){root.querySelector('[data-status]').textContent=msg;}
  function render(){
   levelNodes.forEach(n=>holder.append(n));
@@ -256,10 +273,12 @@
    for(const [selector,value] of [['[data-b-prev]',prevCash],['[data-b-avail]',available],['[data-b-after]',cash],['[data-before]',available]]){
     el.querySelector(selector).dataset.moneyTone=!demo?'unknown':value<0?'shortfall':'balance';
    }
-   el.querySelector('[data-money]').dataset.moneyTone=!demo?'unknown':gap?'shortfall':'balance';
-   el.querySelector('[data-money-label]').textContent=!demo?'必要額':gap?'この地点で不足':'支払い後の予定残高';
-   el.querySelector('[data-money]').textContent=demo?(gap?'−'+wan(gap):wan(cash)):'未確認';
-   el.querySelector('[data-cost]').textContent=demo?wan(x.need):'未確認';
+   el.querySelector('[data-badge]').hidden=!demo||gap===0;
+   el.querySelector('[data-money]').dataset.moneyTone=!demo?'unknown':'expense';
+   el.querySelector('[data-money-label]').textContent='支出';
+   el.querySelector('[data-money]').textContent=demo?'−'+wan(x.need):'未確認';
+   el.querySelector('[data-cost]').dataset.moneyTone=!demo?'unknown':gap?'shortfall':'balance';
+   el.querySelector('[data-cost]').textContent=demo?(cash<0?'−'+wan(-cash):wan(cash)):'未確認';
    const bd=el.querySelector('.q-breakdown');bd.hidden=!demo;
    bd.querySelector('[data-b-prev]').textContent=demo?wan(prevCash):'未確認';
    bd.querySelector('[data-b-inc]').textContent=demo?pwan(c.income):'未確認';
@@ -324,7 +343,7 @@
   levelNodes.forEach((node,i)=>{[...miniNodes[i].children].forEach(row=>group(row.dataset.month).money.push(row));group(stages[i].date.slice(0,7)).money.push(node);});
   tasks.forEach(t=>group(t.date?t.date.slice(0,7):'undated').tasks.push(t));
   holder.replaceChildren();
-  [...groups.keys()].sort((a,b)=>a==='undated'?1:b==='undated'?-1:a.localeCompare(b)).forEach(key=>{
+  [...groups.keys()].sort((a,b)=>a==='undated'?-1:b==='undated'?1:a.localeCompare(b)).forEach(key=>{
    const section=make('section','q-month');section.dataset.month=key;
    section.append(make('h3','',key==='undated'?'時期未定':key.replace('-', '年')+'月'));
    const lanes=make('div','q-lanes');const money=make('div','q-lane q-lane-money');const prep=make('div','q-lane q-lane-prep');
@@ -332,7 +351,15 @@
    const g=groups.get(key);g.money.forEach(node=>money.append(node));
    if(!demo&&g.money.length)money.prepend(make('p','q-empty','この月のイベント配置は仮日程です。金額・期限は未確認。'));
    g.tasks.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const card=taskCard(t);card.open=openIds.has(t.id);prep.append(card);});
-   if(g.money.length)lanes.append(money);if(g.tasks.length)lanes.append(prep);lanes.classList.toggle('q-single-lane',!g.money.length||!g.tasks.length);section.append(lanes);holder.append(section);
+   if(key==='undated'){
+    prep.prepend(make('h4','','準備タスク'));lanes.append(prep);lanes.classList.add('q-single-lane');
+   }else{
+    money.prepend(make('h4','','お金'));prep.prepend(make('h4','','準備タスク'));
+    if(!g.money.length)money.append(make('p','q-empty','この月のお金の予定は未登録です。'));
+    if(!g.tasks.length)prep.append(make('p','q-empty','この月の準備タスクは未登録です。'));
+    lanes.append(money,prep);
+   }
+   section.append(lanes);holder.append(section);
   });
  }
  root.querySelector('[data-task-add]').addEventListener('click',()=>{
