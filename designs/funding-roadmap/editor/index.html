@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>資金ロードマップ・内訳編集</title><link rel="stylesheet" href="/editor.css"><script type="module" src="/editor.js"></script></head>
+<body><main><header><p class="eyebrow">LIFE QUEST / FUNDING PLAN</p><h1>お金の内訳を、ひとつずつ。</h1><p class="intro">イベント費用と毎月の収支を編集して、これからの資金を見通します。</p></header>
+<section class="toolbar" aria-label="保存"><span id="save-state" role="status">読み込み中…</span><div class="actions"><button id="reload" type="button">再読み込み</button><button id="save" type="button" class="primary" disabled>DBに保存</button></div></section>
+<p id="error" role="alert" hidden></p><p class="notice">金額・予定日は試算です。銀行残高・税金原本・Favaへの登録や、支払い実行は行いません。空欄の金額は未確認として扱います。</p>
+<section id="summary" class="summary" aria-label="計画の集計"></section>
+<section class="starting"><div><h2>スタートの資金</h2><p>銀行残高ではなく、この計画で使う仮定です。</p></div><label>手元資金（円）<input id="opening" type="number" min="0" step="1" inputmode="numeric" placeholder="未確認"></label></section>
+<nav aria-label="表示"><button id="timeline-tab" type="button" aria-pressed="true">ロードマップ</button><button id="rules-tab" type="button" aria-pressed="false">毎月の収入・支出</button></nav>
+<section id="timeline" aria-label="イベントと月次収支"></section>
+<section id="rules" hidden><div class="section-head"><div><h2>毎月の収入・支出</h2><p>この設定は指定した期間の各月へ反映します。月ごとの変更はロードマップから。</p></div><button id="add-rule" type="button">＋ 毎月の項目を追加</button></div><div id="rule-list"></div></section>
+<footer>原本：designs/funding-roadmap/db.json ／ 金額は整数の円で保存。保存時にローカルGitへ記録します。GitHubへの同期は別途必要です。</footer>
+</main><dialog id="editor"><form id="editor-form"><div class="dialog-heading"><h2 id="dialog-title"></h2><button type="button" id="close-dialog" aria-label="閉じる">×</button></div><p id="dialog-description"></p><div id="editor-fields"></div><p id="dialog-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" id="cancel-dialog">キャンセル</button><button type="submit" class="primary">変更を適用</button></div></form></dialog></body></html>

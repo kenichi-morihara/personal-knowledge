@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {monthGroups,sum,eventTotal} from '../designs/funding-roadmap/editor/model.mjs';
+const rule={id:'rule1',label:'Salary',direction:'income',amount:310000,start_month:'2027-01',end_month:'2027-01'};
+const plan={monthly_rules:[rule],overrides:[]};
+assert.equal(sum([{amount:0},{amount:10}]),10);
+assert.equal(sum([{amount:10},{amount:null}]),null);
+assert.equal(sum([]),0);
+const first=monthGroups(plan,'2026-12-31','2027-01-15');
+const last=monthGroups(plan,'2027-01-15','2027-01-31');
+assert.equal(first[0].rows[0].amount,150000);
+assert.equal(last[0].rows[0].amount,160000);
+assert.equal(first[0].rows[0].amount+last[0].rows[0].amount,310000);
+rule.amount=533000;
+assert.equal(monthGroups(plan,'2026-12-31','2027-01-15')[0].rows[0].amount,257903);
+assert.equal(monthGroups(plan,'2027-01-15','2027-01-31')[0].rows[0].amount,275097);
+rule.amount=310000;
+plan.overrides=[{rule_id:'rule1',month:'2027-01',amount:0}];
+assert.equal(monthGroups(plan,'2026-12-31','2027-01-31')[0].rows[0].amount,0);
+plan.overrides[0].amount=null;
+assert.equal(monthGroups(plan,'2026-12-31','2027-01-31')[0].rows[0].amount,null);
+assert.equal(rule.amount,310000);
+assert.deepEqual(monthGroups(plan,'2027-01-31','2027-02-28'),[]);
+console.log('Funding math: unknown values, zero override, monthly split without double count, and rule isolation passed');
+
+assert.equal(eventTotal({items:[]}),null);
+assert.equal(eventTotal({items:[],zero_cost:true}),0);
+assert.equal(eventTotal({items:[{amount:null}],zero_cost:true}),null);
