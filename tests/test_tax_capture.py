@@ -94,15 +94,14 @@ class CaptureTest(unittest.TestCase):
         self.assertEqual(second['possible_duplicate_of'], first['path'])
         self.assertEqual(len(self.git('ls-files', 'finance/taxes/captures').splitlines()), 2)
 
-    def test_dirty_tree_keeps_image_and_allows_retry(self):
+    def test_dirty_code_does_not_block_capture_or_commit_user_work(self):
         (self.root / 'README.md').write_text('Uncommitted user edit')
-        with self.assertRaises(ValueError):
-            self.captures.ingest(JPEG)
+        result = self.captures.ingest(JPEG)
+        self.assertTrue(result['saved_locally'])
         self.assertEqual((self.root / 'README.md').read_text(), 'Uncommitted user edit')
+        self.assertEqual(self.git('show', 'HEAD:README.md'), '# Synthetic fixture')
         self.assertEqual(len(list((self.state / 'images').glob('*'))), 1)
-        # Restore only our synthetic test edit, then retry the same image.
-        (self.root / 'README.md').write_text('# Synthetic fixture\n')
-        self.assertTrue(self.captures.ingest(JPEG)['synced'])
+        self.assertTrue(self.captures.ingest(JPEG)['duplicate'])
 
     def test_ocr_failure_is_retryable(self):
         self.captures.ocr = lambda path: (_ for _ in ()).throw(ValueError('Synthetic OCR failure'))

@@ -198,22 +198,15 @@ class Captures:
                 body += '\n確認後の請求原本：未登録。\n'
                 content = '---\n' + yaml.safe_dump(meta, allow_unicode=True, sort_keys=False) + '---\n' + body
                 # Deterministic UUID/path permits retry after an interrupted response or Git push failure.
-                target = self.store.root / path
-                if target.exists():
-                    existing = yaml.safe_load(target.read_text().split('---\n', 2)[1])
-                    if existing.get('id') != record_id or existing.get('image_sha256') != digest:
+                try:
+                    existing_record = self.store.fetch(record_id)
+                except ValueError:
+                    existing_record = None
+                if existing_record:
+                    existing = self.store.parse(existing_record['text'])
+                    if existing.get('image_sha256') != digest or existing_record['path'] != path:
                         raise ValueError('既存記録との競合があります。Macで確認してください。')
-                    # Recover only a committed record; never acknowledge an unrelated local edit.
-                    committed = self.store.git('show', f'HEAD:{path}')
-                    if committed != target.read_text().strip():
-                        raise ValueError('記録に未保存の変更があります。Macで確認してください。')
-                    commit = self.store.git('log', '-1', '--format=%H', '--', path)
-                    try:
-                        self.store.git('fetch', '--quiet', 'origin', 'main')
-                        synced = self.store.git('rev-list', '--count', f'origin/main..{commit}') == '0'
-                    except ValueError:
-                        synced = False
-                    result = dict(id=record_id, path=path, commit=commit, synced=synced, recovered=True)
+                    result = dict(id=record_id, path=path, synced=self.store.sync_status()['synced'], recovered=True)
                 else:
                     result = self.store.put(path, content, '')
                 result.update(fields=fields, possible_duplicate_of=similar, duplicate=False)

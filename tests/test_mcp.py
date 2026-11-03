@@ -181,8 +181,9 @@ class MCPTest(unittest.TestCase):
             self.store.put('notes/link.md', self.content(), '')
         (self.root / 'notes/link.md').unlink()
         (self.root / 'local.txt').write_text('user work')
-        with self.assertRaisesRegex(ValueError, 'local changes'):
-            self.store.put('notes/new.md', self.content(), '')
+        self.data['id'] = str(uuid4())
+        self.assertTrue(self.store.put('notes/new.md', self.content(), '')['saved_locally'])
+        self.assertEqual((self.root / 'local.txt').read_text(), 'user work')
         with self.assertRaisesRegex(ValueError, 'credential'):
             self.store.put('notes/new.md', self.content('ghp_' + 'x' * 30), '')
 
@@ -226,8 +227,10 @@ class MCPTest(unittest.TestCase):
         commit = subprocess.check_output(['git', '-C', str(self.root), 'commit-tree', 'HEAD^{tree}', '-p', 'HEAD', '-m', 'Other writer'], text=True).strip()
         subprocess.run(['git', '--git-dir', str(self.bare), 'fetch', str(self.root), commit], check=True, capture_output=True)
         subprocess.run(['git', '--git-dir', str(self.bare), 'update-ref', 'refs/heads/main', commit], check=True, capture_output=True)
-        with self.assertRaisesRegex(ValueError, 'Remote has new commits'):
-            self.store.put('notes/test.md', self.content('Overwrite'), self.store.fetch(self.id)['sha256'])
+        result = self.store.put('notes/test.md', self.content('Locally saved update'), self.store.fetch(self.id)['sha256'])
+        self.assertFalse(result['synced'])
+        self.assertTrue(result['saved_locally'])
+        self.assertIn('Locally saved update', self.store.fetch(self.id)['text'])
         self.assertEqual(self.git('rev-parse', 'HEAD'), before)
 
     def test_list_obligations_over_http(self):

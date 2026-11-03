@@ -156,9 +156,9 @@ def main():
         else:
             if not args.origin:
                 raise ValueError('--origin is required')
-            captures = Captures(STATE, Store(ROOT, MCP_STATE), partial(native_ocr, STATE / 'bin/ocr'))
+            captures = Captures(STATE, Store(ROOT, MCP_STATE, auto_sync=False), partial(native_ocr, STATE / 'bin/ocr'))
             import uvicorn
-            uvicorn.run(create_app(captures, args.origin, key(), local_port=args.port), host='127.0.0.1', port=args.port, log_level='warning', access_log=False)
+            uvicorn.run(create_app(captures, args.origin, key(), local_port=args.port, background_sync=True), host='127.0.0.1', port=args.port, log_level='warning', access_log=False)
     except (ValueError, OSError, subprocess.CalledProcessError, queue.Empty) as exc:
         parser.exit(1, f'{exc}\n')
 

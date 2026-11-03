@@ -1,6 +1,6 @@
 # personal-knowledge
 
-自分が所有する、Agentに依存しないパーソナルナレッジ。原本はこのprivate GitリポジトリのMarkdownです。
+自分が所有する、Agentに依存しないパーソナルナレッジ。同期済みの原本はこのprivate GitリポジトリのMarkdownです。画面・MCPの書き込みは共有ローカルジャーナルへ先に保存し、Gitへ非同期反映します。参照時は未同期分を含めます。
 
 ## 使い始める
 

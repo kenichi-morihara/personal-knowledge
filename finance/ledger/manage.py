@@ -25,7 +25,11 @@ def quoted(value):
     return json.dumps(str(value), ensure_ascii=False)
 
 
-def project(root):
+def project(root, store=None):
+    if store is not None:
+        with tempfile.TemporaryDirectory() as directory:
+            store.materialize(Path(directory))
+            return project(Path(directory))
     spec = importlib.util.spec_from_file_location('knowledge_validator', root / 'scripts/validate.py')
     validator = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(validator)
@@ -44,7 +48,7 @@ def project(root):
         if path.name == 'README.md' or any(p.startswith('.') for p in path.relative_to(root).parts):
             continue
         data = yaml.safe_load(path.read_text().split('---\n', 2)[1])
-        if data['type'] != 'obligation':
+        if data['type'] != 'obligation' or data.get('lifecycle') == 'cancelled':
             continue
         relative = path.relative_to(root).as_posix()
         if any(data.get(key) is None for key in ('amount_due', 'opening_paid', 'amount_paid', 'amount_remaining', 'currency')):
@@ -102,7 +106,9 @@ def main():
     parser.add_argument('command', choices=['check', 'build', 'summary', 'serve'])
     args = parser.parse_args()
     try:
-        text, report = project(ROOT)
+        from mcp_store import Store
+        state = Path.home() / 'Library/Application Support/personal-knowledge-mcp'
+        text, report = project(ROOT, Store(ROOT, state, auto_sync=False))
         if args.command == 'summary':
             print(json.dumps(report, ensure_ascii=False, indent=2))
         elif args.command == 'check':

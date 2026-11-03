@@ -20,7 +20,11 @@ help:
 	  'make capture-key-copy 撮影用ログインキーをコピー' \
 	  'make capture-pending 要確認の撮影記録を一覧表示' \
 	  'make capture-stop    撮影ページだけを停止' \
-	  'make capture-test    撮影機能のテストを実行'
+	  'make capture-test    撮影機能のテストを実行' \
+	  'make records-status  Git・AI Tasksの反映待ちを確認' \
+	  'make records-sync    Git・AI Tasksへの同期を再試行' \
+	  'make records-check   未同期分を含む原本を検証' \
+	  'make tasks-connect-local ローカルAI Tasksを接続先に設定'
 
 ledger-setup:
 	@test -x "$(LEDGER_PYTHON)" || "$(PYTHON)" -m venv .beancount/.venv
@@ -74,3 +78,13 @@ capture-pending: capture-ready
 
 capture-test: capture-ready
 	@"$(CAPTURE_PYTHON)" -m unittest discover -s tests -p test_tax_capture.py -v
+
+.PHONY: records-sync records-status records-check tasks-connect-local
+records-sync:
+	@.venv/bin/python scripts/sync_records.py sync
+records-status:
+	@.venv/bin/python scripts/sync_records.py status
+records-check:
+	@.venv/bin/python scripts/sync_records.py check
+tasks-connect-local:
+	@.venv/bin/python scripts/sync_records.py tasks-connect-local

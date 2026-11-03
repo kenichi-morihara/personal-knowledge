@@ -98,6 +98,21 @@ def validate(root):
             if kind == 'opportunity':
                 require(data.get('status') in {'unknown', 'lead', 'contacted', 'negotiating', 'won', 'lost', 'on_hold'}, 'invalid opportunity status')
             if kind == 'obligation':
+                lifecycle = data.get('lifecycle', 'active')
+                require(lifecycle in ('active', 'cancelled'), 'invalid obligation lifecycle')
+                events = data.get('lifecycle_events', [])
+                require(isinstance(events, list), 'lifecycle_events must be a list')
+                for event in events if isinstance(events, list) else []:
+                    if not isinstance(event, dict):
+                        require(False, 'lifecycle event must be a mapping')
+                        continue
+                    unique_id(event.get('id'))
+                    require(event.get('action') in ('cancel', 'reopen') and valid_date(event.get('recorded_at'))
+                            and isinstance(event.get('reason'), str) and bool(event.get('reason', '').strip()), 'invalid lifecycle event')
+                if isinstance(events, list) and events and isinstance(events[-1], dict):
+                    require(lifecycle == ('cancelled' if events[-1].get('action') == 'cancel' else 'active'), 'lifecycle must agree with last event')
+                if lifecycle == 'cancelled':
+                    require(bool(events) and data.get('amount_paid') == '0', 'cancelled obligation requires reason history and no paid amount')
                 values = {k: money(data.get(k), k, currency) for k in ('amount_due', 'opening_paid', 'amount_paid', 'amount_remaining')}
                 payments = data.get('payments')
                 require(isinstance(payments, list), 'payments must be a list')

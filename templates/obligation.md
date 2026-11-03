@@ -17,6 +17,8 @@ amount_paid: null
 amount_remaining: null
 due_date: null
 status: unknown
+lifecycle: active
+lifecycle_events: []
 payments: []
 payment_corrections: []
 obligation_corrections: []

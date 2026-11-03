@@ -122,22 +122,24 @@ class ManagementTest(unittest.TestCase):
         with self.assertRaises(ValueError):self.manager().pay(oid,p)
         self.assertEqual(self.manager().get(oid)['data']['payments'],[])
 
-    def test_atomic_rollback_and_unsynced(self):
+    def test_commit_failure_preserves_local_transaction_and_retries(self):
         r,p=self.notice()
         real_git=self.store.git
         def fail_commit(*args):
             if args[0]=='commit':raise ValueError('synthetic commit failure')
             return real_git(*args)
         with patch.object(self.store,'git',side_effect=fail_commit):
-            with self.assertRaises(ValueError):self.manager().review(r['id'],p)
-        self.assertEqual(self.store.list_obligations()['obligations'],[])
-        self.assertEqual(self.manager().get(r['id'])['data']['capture_status'],'needs_review')
+            result=self.manager().review(r['id'],p)
+        self.assertFalse(result['synced'])
+        self.assertEqual(len(self.store.list_obligations()['obligations']),1)
+        self.assertEqual(self.manager().get(r['id'])['data']['capture_status'],'reviewed')
         self.assertEqual(self.git('status','--porcelain'),'')
+        self.assertTrue(self.store.sync()['synced'])
         self.git('remote','set-url','--push','origin',str(self.root/'unavailable'))
-        result=self.manager().review(r['id'],p)
+        result=self.manager().amend(result['id'],dict(sha256=self.store.fetch(result['id'])['sha256'],operation_id='unsynced-amend',
+            reason='Synthetic',confirmed=True,fields=dict(self.manager().get(result['id'])['data'],amount_due='60000')))
         self.assertFalse(result['synced'])
         self.assertFalse(self.manager().overview()['sync']['synced'])
-        self.assertTrue(self.manager().review(r['id'],p)['already_recorded'])
 
     def test_amend_preserves_history_and_optimistic_lock(self):
         oid = self.create_notice()

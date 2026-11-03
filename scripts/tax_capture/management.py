@@ -2,6 +2,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 import hashlib
+from functools import wraps
 import re
 from uuid import uuid5
 from zoneinfo import ZoneInfo
@@ -9,7 +10,8 @@ from zoneinfo import ZoneInfo
 import yaml
 
 from core import NAMESPACE
-from obligations import effective_payments
+from obligations import effective_payments, duplicate_candidates
+from task_sync import TaskSync
 
 CATEGORIES = ('住民税', '所得税', '消費税', '個人事業税', '国民健康保険', '国民年金')
 
@@ -51,10 +53,22 @@ def calendar(value, name, optional=False):
     return value
 
 
+def serialized(method):
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self.store.locked():
+            result = method(self, *args, **kwargs)
+        if self.store.auto_sync and result.get('changed'):
+            result.update(self.store.sync())
+        return result
+    return call
+
+
 class Management:
-    def __init__(self, captures):
+    def __init__(self, captures, tasks=None):
         self.captures = captures
         self.store = captures.store
+        self.tasks = TaskSync(self.store, tasks)
 
     def get(self, record_id):
         record = self.store.fetch(record_id)
@@ -68,6 +82,7 @@ class Management:
                                  for path, content, data in self.store.records()
                                  if data.get('capture_status') == 'needs_review']
         result['sync'] = self.store.sync_status()
+        result['tasks'] = self.tasks.status()
         return result
 
     def image(self, digest):
@@ -106,20 +121,13 @@ class Management:
                 raise ValueError('支払い対象を選んでください。')
         result = self.captures.ingest(raw, kind=kind, obligation_id=target, allow_unreadable=True)
         record = self.get(result['id'])
-        return dict(result, record=record)
+        return dict(result, record=record, synced=self.store.sync_status()['synced'],
+                    association_conflict=(record['data'].get('capture_kind', 'notice') != kind or (kind == 'receipt' and record['data'].get('target_obligation_id') != target)))
 
     def candidates(self, data):
-        candidates = []
-        for row in self.store.list_obligations()['obligations']:
-            if row.get('category') != data.get('category') or row.get('fiscal_year') != data.get('fiscal_year'):
-                continue
-            # Annual/unspecified period records may overlap a new installment: require review.
-            if (row.get('issuer') in (None, data.get('issuer')) and
-                    (not row.get('installment') or not data.get('installment') or row.get('installment') == data.get('installment'))):
-                candidates.append(dict(id=row['id'], category=row.get('category'), issuer=row.get('issuer'),
-                                       installment=row.get('installment'), amount_due=row.get('amount_due')))
-        return candidates
+        return duplicate_candidates(data, self.store.list_obligations()['obligations'])
 
+    @serialized
     def review(self, capture_id, payload):
         original = self.get(capture_id)
         note = original['data']
@@ -194,30 +202,49 @@ class Management:
         data.update(amount_paid=str(paid), amount_remaining=str(remaining),
                     status='paid' if remaining == 0 else 'partial' if paid > 0 else 'unpaid')
 
+    @serialized
     def pay(self, obligation_id, payload):
-        receipt = self.get(payload.get('capture_id'))
-        note = receipt['data']
-        if note.get('capture_status') == 'reviewed':
-            if note.get('confirmed_record_id') != obligation_id or note.get('review_kind') != 'payment':
-                raise ValueError('この画像は別の用途で登録済みです。')
-            return {'already_recorded': True, 'id': obligation_id, 'synced': self.store.sync_status()['synced']}
-        receipt = self.checked(receipt['id'], payload.get('capture_sha256'), 'note')
-        note = receipt['data']
-        if note.get('capture_kind') != 'receipt' or note.get('target_obligation_id') != obligation_id or note.get('capture_status') != 'needs_review':
-            raise ValueError('対象請求の領収書を撮影してください。')
+        receipt = None
+        if payload.get('capture_id'):
+            receipt = self.get(payload['capture_id'])
+            note = receipt['data']
+            if note.get('capture_status') == 'reviewed':
+                if note.get('confirmed_record_id') != obligation_id or note.get('review_kind') != 'payment':
+                    raise ValueError('この画像は別の用途で登録済みです。')
+                return {'already_recorded': True, 'id': obligation_id, 'synced': self.store.sync_status()['synced']}
+            receipt = self.checked(receipt['id'], payload.get('capture_sha256'), 'note')
+            note = receipt['data']
+            if note.get('capture_kind') != 'receipt' or note.get('target_obligation_id') != obligation_id or note.get('capture_status') != 'needs_review':
+                raise ValueError('対象請求の領収書を確認し、必要なら紐づけ先を変更してください。')
+            payment_id = str(uuid5(NAMESPACE, 'payment:' + note['image_sha256']))
+            source = f'本人確認済み領収書 SHA-256: {note["image_sha256"]}'
+            evidence_type = 'receipt'
+        else:
+            operation = short(payload.get('operation_id'), '登録ID', True)
+            payment_id = str(uuid5(NAMESPACE, 'manual-payment:' + operation))
+            existing = self.get(obligation_id)['data']
+            if any(p['id'] == payment_id for p in existing.get('payments', [])):
+                return {'already_recorded': True, 'id': obligation_id, 'synced': self.store.sync_status()['synced']}
+            evidence_type = payload.get('evidence_type')
+            if evidence_type not in ('statement', 'owner_report'):
+                raise ValueError('取引明細または本人申告を選んでください。')
+            source = short(payload.get('source'), '支払い確認の根拠', True)
         record = self.checked(obligation_id, payload.get('sha256'), 'obligation')
         data = record['data']
+        if data.get('lifecycle') == 'cancelled':
+            raise ValueError('取消済みの請求へは記録できません。先に請求を再開してください。')
         if payload.get('confirmed') is not True:
-            raise ValueError('領収書と支払い内容を確認してください。')
+            raise ValueError('実際の支払い・対象・金額・日付を確認してください。')
         if data.get('currency') != 'JPY' or data.get('opening_paid') is None or data.get('amount_due') is None:
-            raise ValueError('先に請求額・既納額・通貨をMacで確認してください。')
+            raise ValueError('先に請求額・既納額・通貨を確認してください。')
         paid_at = calendar(payload.get('paid_at'), '支払日')
         if paid_at > today():
             raise ValueError('支払日は未来日にできません。')
         amount = money(payload.get('amount'))
-        payment = dict(id=str(uuid5(NAMESPACE, 'payment:' + note['image_sha256'])), amount=amount,
-                       paid_at=paid_at, source=f'本人確認済み領収書 SHA-256: {note["image_sha256"]}',
-                       method=short(payload.get('method'), '支払い方法'), image_sha256=note['image_sha256'])
+        payment = dict(id=payment_id, amount=amount, paid_at=paid_at, source=source,
+                       method=short(payload.get('method'), '支払い方法'), evidence_type=evidence_type)
+        if receipt:
+            payment['image_sha256'] = note['image_sha256']
         possible = [p for p in effective_payments(data) if p['amount'] == amount and p['paid_at'] == paid_at]
         if possible and payload.get('distinct_confirmed') is not True:
             return {'needs_duplicate_review': True, 'candidates': possible}
@@ -225,10 +252,13 @@ class Management:
             payment['duplicate_review_reason'] = short(payload.get('distinct_reason'), '別支払いと確認した理由', True)
         data['payments'].append(payment)
         self.recalculate(data)
-        note.update(capture_status='reviewed', confirmed_record_id=obligation_id, review_kind='payment')
-        result = self.store.put_many([self.change(record, data), self.change(receipt, note)])
-        return dict(result, id=obligation_id)
+        changes = [self.change(record, data)]
+        if receipt:
+            note.update(capture_status='reviewed', confirmed_record_id=obligation_id, review_kind='payment')
+            changes.append(self.change(receipt, note))
+        return dict(self.store.put_many(changes), id=obligation_id)
 
+    @serialized
     def correct(self, obligation_id, payload):
         record = self.get(obligation_id)
         data = record['data']
@@ -262,6 +292,7 @@ class Management:
         self.recalculate(data)
         return self.store.put_many([self.change(record, data)])
 
+    @serialized
     def amend(self, obligation_id, payload):
         record = self.get(obligation_id)
         data = record['data']
@@ -271,6 +302,8 @@ class Management:
             return {'already_recorded': True, 'id': obligation_id, 'synced': self.store.sync_status()['synced']}
         record = self.checked(obligation_id, payload.get('sha256'), 'obligation')
         data = record['data']
+        if data.get('lifecycle') == 'cancelled':
+            raise ValueError('取消済みの請求は先に再開してください。')
         fields = payload.get('fields', {})
         if not isinstance(fields, dict) or payload.get('confirmed') is not True:
             raise ValueError('用紙と内容を確認してください。')
@@ -296,7 +329,65 @@ class Management:
         if candidates and payload.get('distinct_confirmed') is not True:
             return {'needs_duplicate_review': True, 'candidates': candidates}
         if candidates:
-            short(payload.get('distinct_reason'), '別請求と確認した理由', True)
+            data['duplicate_review_reason'] = short(payload.get('distinct_reason'), '別請求と確認した理由', True)
         data.setdefault('obligation_corrections', []).append(dict(id=correction_id, corrected_at=today(), reason=reason, previous=before))
         data['sources'].append(dict(reference='本人が用紙と照合して訂正: ' + reason, captured_at=today()))
         return self.store.put_many([self.change(record, data)])
+
+    @serialized
+    def lifecycle(self, obligation_id, payload):
+        record = self.get(obligation_id)
+        data = record['data']
+        operation = short(payload.get('operation_id'), '操作ID', True)
+        event_id = str(uuid5(NAMESPACE, 'lifecycle:' + operation))
+        if any(e['id'] == event_id for e in data.get('lifecycle_events', [])):
+            return {'already_recorded': True, 'id': obligation_id, 'synced': self.store.sync_status()['synced']}
+        record = self.checked(obligation_id, payload.get('sha256'), 'obligation')
+        data = record['data']
+        action = payload.get('action')
+        if action not in ('cancel', 'reopen'):
+            raise ValueError('取消または再開を選んでください。')
+        reason = short(payload.get('reason'), '理由', True)
+        if action == 'cancel':
+            if data.get('amount_paid') != '0':
+                raise ValueError('支払い記録がある・既納額が不明な請求は取り消せません。実績を確認して先に訂正してください。')
+            data['lifecycle'] = 'cancelled'
+        else:
+            data['lifecycle'] = 'active'
+            candidates = self.candidates(data)
+            if candidates and payload.get('distinct_confirmed') is not True:
+                return {'needs_duplicate_review': True, 'candidates': candidates}
+            if candidates:
+                data['duplicate_review_reason'] = short(payload.get('distinct_reason'), '別請求と確認した理由', True)
+        data.setdefault('lifecycle_events', []).append(dict(id=event_id, action=action, reason=reason, recorded_at=today()))
+        return self.store.put_many([self.change(record, data)])
+
+    @serialized
+    def reassign(self, capture_id, payload):
+        record = self.get(capture_id)
+        note = record['data']
+        operation = short(payload.get('operation_id'), '操作ID', True)
+        event_id = str(uuid5(NAMESPACE, 'reassign:' + operation))
+        if any(e['id'] == event_id for e in note.get('association_events', [])):
+            return {'already_recorded': True, 'id': capture_id, 'synced': self.store.sync_status()['synced']}
+        record = self.checked(capture_id, payload.get('sha256'), 'note')
+        note = record['data']
+        if note.get('capture_status') == 'reviewed' or not note.get('image_sha256'):
+            raise ValueError('確定済みの写真は付け替えできません。記録済みの支払いを先に確認してください。')
+        reason = short(payload.get('reason'), '付け替え理由', True)
+        kind = payload.get('kind')
+        target = payload.get('target_id')
+        if kind not in ('notice', 'receipt'):
+            raise ValueError('書類の種類を選んでください。')
+        if kind == 'receipt':
+            obligation = self.get(target)['data']
+            if obligation.get('type') != 'obligation' or obligation.get('lifecycle') == 'cancelled':
+                raise ValueError('有効な支払い対象を選んでください。')
+        else:
+            target = None
+        note.setdefault('association_events', []).append(dict(id=event_id, reason=reason, recorded_at=today(),
+            previous_kind=note.get('capture_kind', 'notice'), previous_target=note.get('target_obligation_id')))
+        note.update(capture_kind=kind, target_obligation_id=target, capture_status='needs_review')
+        note.pop('review_draft', None)
+        body = '# 確認待ちの撮影記録\n\n本人が書類の種類・対象を変更して再確認中。変更理由: ' + reason + '\nまだ請求・支払いを確定した記録ではありません。\n'
+        return self.store.put_many([self.change(record, note, body)])

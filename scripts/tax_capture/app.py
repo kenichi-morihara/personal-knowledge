@@ -1,4 +1,5 @@
 """Owner-only Android capture page; separate from the live MCP service."""
+from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
@@ -20,7 +21,7 @@ from management import Management
 COOKIE = 'tax_capture_session'
 
 
-def create_app(captures, origin, owner_key, local_port=8780):
+def create_app(captures, origin, owner_key, local_port=8780, background_sync=False, tasks=None):
     parsed = urlparse(origin)
     if (parsed.scheme != 'https' and not (parsed.scheme == 'http' and parsed.hostname == '127.0.0.1')) or parsed.path not in ('', '/') or parsed.query or parsed.fragment or parsed.username:
         raise ValueError('Public URL must be an HTTPS origin (HTTP loopback for tests only)')
@@ -28,7 +29,20 @@ def create_app(captures, origin, owner_key, local_port=8780):
     secure = parsed.scheme == 'https'
     failure_times = []
     active_upload = False
-    management = Management(captures)
+    management = Management(captures, tasks)
+    workers = None
+
+    @asynccontextmanager
+    async def lifespan(app):
+        nonlocal workers
+        if background_sync:
+            from sync_runtime import SyncWorkers
+            workers = SyncWorkers(management.store, management.tasks)
+        try:
+            yield
+        finally:
+            if workers:
+                workers.close()
 
     def sign(value):
         return hmac.new(owner_key.encode(), value.encode(), hashlib.sha256).hexdigest()
@@ -125,6 +139,12 @@ def create_app(captures, origin, owner_key, local_port=8780):
             if request.method == 'GET':
                 if operation == 'overview':
                     return JSONResponse(await run_in_threadpool(management.overview))
+                if operation == 'tasks':
+                    if not management.tasks.client.configured:
+                        return JSONResponse({'configured': False, 'tasks': [], 'next_page': None})
+                    page_number = int(request.query_params.get('page', '0'))
+                    report = await run_in_threadpool(management.tasks.client.list, page_number)
+                    return JSONResponse(dict(report, configured=True))
                 if operation == 'record':
                     return JSONResponse(await run_in_threadpool(management.get, record_id))
                 if operation == 'image':
@@ -139,7 +159,14 @@ def create_app(captures, origin, owner_key, local_port=8780):
                 payload = json.loads(raw)
                 if not isinstance(payload, dict):
                     raise ValueError('入力を確認してください。')
-                handlers = {'review': management.review, 'pay': management.pay, 'correct': management.correct, 'amend': management.amend}
+                if operation == 'sync':
+                    if workers:
+                        workers.request()
+                    return JSONResponse({'sync_requested': workers is not None, 'sync': management.store.sync_status(), 'tasks': management.tasks.status()})
+                if operation == 'task':
+                    result = await run_in_threadpool(management.tasks.update_task, record_id, payload)
+                    return JSONResponse({'task': result})
+                handlers = {'lifecycle': management.lifecycle, 'reassign': management.reassign, 'review': management.review, 'pay': management.pay, 'correct': management.correct, 'amend': management.amend}
                 if operation in handlers:
                     return JSONResponse(await run_in_threadpool(handlers[operation], record_id, payload))
             return JSONResponse({'error': '対象がありません。'}, status_code=404)
@@ -155,7 +182,7 @@ def create_app(captures, origin, owner_key, local_port=8780):
     async def health(request):
         return JSONResponse({'status': 'ok'})
 
-    app = Starlette(routes=[Route('/', home), Route('/login', login, methods=['POST']), Route('/logout', logout, methods=['POST']), Route('/capture', capture, methods=['POST']), Route('/api/{operation}', api, methods=['GET', 'POST']), Route('/manifest.webmanifest', manifest), Route('/health', health)])
+    app = Starlette(lifespan=lifespan, routes=[Route('/', home), Route('/login', login, methods=['POST']), Route('/logout', logout, methods=['POST']), Route('/capture', capture, methods=['POST']), Route('/api/{operation}', api, methods=['GET', 'POST']), Route('/manifest.webmanifest', manifest), Route('/health', health)])
 
     async def boundary(request: Request, call_next):
         # Check Host even though the process binds to loopback behind a tunnel.

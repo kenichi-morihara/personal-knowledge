@@ -237,10 +237,13 @@
         <button id="refresh" class="secondary">更新</button>
       </header>
       <div id="sync"></div>
+      <button id="retry-sync" class="secondary">同期を再試行</button>
       <nav aria-label="表示切替">
         <button data-tab="open">未払い</button
         ><button data-tab="pending">確認待ち</button
-        ><button data-tab="paid">支払済み</button>
+        ><button data-tab="paid">支払済み</button
+        ><button data-tab="cancelled">取消済み</button
+        ><button data-tab="tasks">ToDo</button>
       </nav>
       <button id="new" class="upload">＋ 納付書を登録する</button>
       <div id="message" role="status" aria-live="polite"></div>
@@ -282,6 +285,7 @@
         undated: "期限未確認",
         unknown: "金額・支払い状況の確認が必要",
         paid: "支払済み",
+        cancelled: "取消済み（集計対象外）",
       };
       const yen = (v, c = "JPY") =>
         v == null
@@ -343,17 +347,25 @@
         message(
           r.synced
             ? "GitHubにも保存済みです。"
-            : "Macに保存済みです。GitHubへの同期は要対応です。MacでGit状態を確認してください。",
+            : "Macに保存済みです。GitHub・ToDoにはバックグラウンドで反映します。",
         );
       }
       async function load() {
         overview = await api("overview");
         $("#sync").textContent = overview.sync.synced
           ? "保存済み · 前回確認時点のGitHubと一致"
-          : "保存状態：要対応 · Macの変更またはGitHubへの未同期があります";
-        render();
+          : "Macに保存済み · GitHubへの反映待ち" +
+            (overview.sync.pending_records
+              ? " " + overview.sync.pending_records + "件"
+              : "");
+        if (overview.sync.error)
+          $("#sync").textContent += " · 同期は再試行できます";
+        $("#sync").textContent += overview.tasks.configured
+          ? " / ToDo反映待ち " + overview.tasks.pending + "件"
+          : " / AI Tasks未接続";
+        await render();
       }
-      function render() {
+      async function render() {
         currentRecord = null;
         content.replaceChildren();
         document
@@ -361,6 +373,7 @@
           .forEach((e) =>
             e.setAttribute("aria-current", String(e.dataset.tab === tab)),
           );
+        if (tab === "tasks") return showTasks();
         if (tab === "pending") {
           node("h2", "確認待ち " + overview.pending.length + "件", content);
           for (const r of overview.pending) {
@@ -384,11 +397,18 @@
           return;
         }
         const rows = overview.obligations.filter((r) =>
-          tab === "paid" ? r.status === "paid" : r.status !== "paid",
+          tab === "cancelled"
+            ? r.lifecycle === "cancelled"
+            : r.lifecycle !== "cancelled" &&
+              (tab === "paid" ? r.status === "paid" : r.status !== "paid"),
         );
         node(
           "h2",
-          (tab === "paid" ? "支払済み" : "未払い・要確認") +
+          (tab === "cancelled"
+            ? "取消済み（集計対象外）"
+            : tab === "paid"
+              ? "支払済み"
+              : "未払い・要確認") +
             " " +
             rows.length +
             "件",
@@ -400,9 +420,11 @@
             "まだ登録されていません。「納付書を登録する」から撮影できます。",
             content,
           );
-        for (const group of tab === "paid"
-          ? ["paid"]
-          : ["overdue", "soon", "later", "undated", "unknown"]) {
+        for (const group of tab === "cancelled"
+          ? ["cancelled"]
+          : tab === "paid"
+            ? ["paid"]
+            : ["overdue", "soon", "later", "undated", "unknown"]) {
           const rs = rows.filter((r) => r.bucket === group);
           if (!rs.length) continue;
           node(
@@ -533,16 +555,26 @@
           throw e;
         }
         saved(r);
+        if (r.association_conflict)
+          message(
+            "この写真は別の種類・請求に紐づいています。下の「書類の種類・紐づけ先を変更」から確認してください。",
+          );
         lastFile = null;
         await openCapture(r.id);
       }
       async function openCapture(id) {
+        overview = await api("overview");
         const r = await api("record?id=" + encodeURIComponent(id));
         if (r.data.capture_status === "reviewed") {
           message("この写真は確認・登録済みです。");
           if (r.data.confirmed_record_id)
             return detail(r.data.confirmed_record_id);
           return load();
+        }
+        if (r.data.capture_status === "dismissed") {
+          const host = captureHeader(r, "除外した書類を再確認");
+          reassignForm(r, host);
+          return;
         }
         if (r.data.capture_kind === "receipt") return receipt(r);
         return notice(r);
@@ -565,6 +597,7 @@
       }
       function notice(r) {
         const host = captureHeader(r, "納付書の内容を確認");
+        reassignForm(r, host);
         const f = node("form", null, host);
         f.onsubmit = (e) => e.preventDefault();
         const d = r.data.review_draft ||
@@ -780,7 +813,13 @@
           content,
         );
         const c = node("section", null, content, "card");
-        node("small", "未払額", c);
+        node(
+          "small",
+          d.lifecycle === "cancelled"
+            ? "取消済み・集計対象外（元の残額）"
+            : "未払額",
+          c,
+        );
         node("div", yen(d.amount_remaining, d.currency), c, "amount");
         node(
           "p",
@@ -791,14 +830,80 @@
           c,
         );
         node("p", "納期限：" + (d.due_date || "未確認"), c);
-        if (d.status !== "paid")
+        if (d.status !== "paid" && d.lifecycle !== "cancelled")
           button(
             "領収書から支払いを記録",
             () => uploadChooser("receipt", id),
             c,
             "",
           );
-        button("請求内容を理由付きで訂正", () => amend(r), c);
+        if (d.lifecycle !== "cancelled") {
+          if (d.status !== "paid")
+            button("明細・本人申告から支払いを記録", () => manualPayment(r), c);
+          button("請求内容を理由付きで訂正", () => amend(r), c);
+        }
+        const life = node("details", null, c);
+        node(
+          "summary",
+          d.lifecycle === "cancelled" ? "請求を再開する" : "請求を取り消す",
+          life,
+        );
+        node(
+          "small",
+          "履歴を保持します。支払い実績がある請求は、その実績を確認・訂正してから取り消してください。",
+          life,
+        );
+        const lifeReason = field(life, "reason", "取消・再開の理由", "");
+        const lifeOp = crypto.randomUUID();
+        button(
+          d.lifecycle === "cancelled" ? "理由を残して再開" : "理由を残して取消",
+          async () => {
+            const payload = {
+              sha256: r.sha256,
+              operation_id: lifeOp,
+              reason: lifeReason.value,
+              action: d.lifecycle === "cancelled" ? "reopen" : "cancel",
+            };
+            const result = await api("lifecycle?id=" + id, payload);
+            if (result.needs_duplicate_review)
+              return duplicate(result, payload, async (p) => {
+                saved(await api("lifecycle?id=" + id, p));
+                await detail(id);
+              });
+            saved(result);
+            await detail(id);
+          },
+          life,
+        );
+        for (const e of d.lifecycle_events || [])
+          node(
+            "p",
+            (e.action === "cancel" ? "取消" : "再開") +
+              " " +
+              e.recorded_at +
+              "：" +
+              e.reason,
+            c,
+          );
+        const tasks = await api("overview");
+        const link = tasks.tasks.links.find((x) => x.record_id === id);
+        node(
+          "small",
+          !tasks.tasks.configured
+            ? "AI Tasks未接続：ToDoは接続後に反映されます。"
+            : link?.synced
+              ? "AI TasksのToDoへ反映済み"
+              : "AI TasksのToDoへ反映待ち",
+          c,
+        );
+        button(
+          "AI TasksのToDoを見る",
+          async () => {
+            tab = "tasks";
+            await load();
+          },
+          c,
+        );
         node("h3", "支払い履歴", content);
         const voided = new Set(
           (d.payment_corrections || []).map((x) => x.payment_id),
@@ -990,6 +1095,7 @@
           "record?id=" + encodeURIComponent(r.data.target_obligation_id),
         );
         const host = captureHeader(r, "領収書の内容を確認");
+        reassignForm(r, host);
         node(
           "p",
           "対象：" +
@@ -1055,6 +1161,216 @@
           host,
         );
       }
+      function reassignForm(r, parent) {
+        const box = node("details", null, parent, "card");
+        node("summary", "書類の種類・紐づけ先を変更", box);
+        const kind = field(
+          box,
+          "kind",
+          "書類の種類",
+          r.data.capture_kind || "notice",
+          "text",
+          [],
+        );
+        for (const [value, label] of [
+          ["notice", "納付書"],
+          ["receipt", "領収書"],
+        ]) {
+          const o = node("option", label, kind);
+          o.value = value;
+        }
+        kind.value = r.data.capture_kind || "notice";
+        const select = field(
+          box,
+          "target_id",
+          "領収書の支払い対象",
+          "",
+          "text",
+          [],
+        );
+        const empty = node("option", "請求を選択", select);
+        empty.value = "";
+        for (const row of overview?.obligations || []) {
+          if (row.lifecycle === "cancelled") continue;
+          const o = node(
+            "option",
+            [
+              row.category,
+              row.issuer,
+              row.installment,
+              yen(row.amount_due, row.currency),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            select,
+          );
+          o.value = row.id;
+        }
+        select.value = r.data.target_obligation_id || "";
+        const reason = field(box, "reason", "変更・再確認の理由", "");
+        const operation = crypto.randomUUID();
+        button(
+          "履歴を残して変更",
+          async () => {
+            saved(
+              await api("reassign?id=" + r.id, {
+                sha256: r.sha256,
+                operation_id: operation,
+                kind: kind.value,
+                target_id: select.value,
+                reason: reason.value,
+              }),
+            );
+            await openCapture(r.id);
+          },
+          box,
+        );
+      }
+      function manualPayment(r) {
+        content.replaceChildren();
+        button("← 詳細に戻る", () => detail(r.id), content);
+        node("h2", "明細・本人申告から支払いを記録", content);
+        node(
+          "p",
+          "対象：" +
+            [r.data.category, r.data.issuer, r.data.installment]
+              .filter(Boolean)
+              .join(" · "),
+          content,
+        );
+        const f = node("form", null, content, "card");
+        f.onsubmit = (e) => e.preventDefault();
+        const evidence = field(
+          f,
+          "evidence_type",
+          "確認元",
+          "statement",
+          "text",
+          [],
+        );
+        for (const [value, label] of [
+          ["statement", "口座・取引明細"],
+          ["owner_report", "本人申告"],
+        ]) {
+          const o = node("option", label, evidence);
+          o.value = value;
+        }
+        field(
+          f,
+          "source",
+          "確認した明細名・取引の識別情報、または本人申告の内容",
+          "",
+        );
+        field(f, "amount", "実際に支払った金額（円）", "", "number");
+        field(f, "paid_at", "実際の支払日", "", "date");
+        field(f, "method", "支払い方法（例：口座振替）", "");
+        const confirmed = check(
+          f,
+          "confirmed",
+          "実際に支払い済みであり、対象・金額・日付を確認した",
+        );
+        const operation = crypto.randomUUID();
+        button(
+          "支払い実績を保存",
+          async () => {
+            const payload = {
+              ...values(f),
+              sha256: r.sha256,
+              operation_id: operation,
+              confirmed: confirmed.checked,
+            };
+            const result = await api("pay?id=" + r.id, payload);
+            if (result.needs_duplicate_review)
+              return duplicate(result, payload, async (p) => {
+                saved(await api("pay?id=" + r.id, p));
+                await detail(r.id);
+              });
+            saved(result);
+            await detail(r.id);
+          },
+          f,
+          "",
+        );
+      }
+      async function showTasks(page = 0) {
+        content.replaceChildren();
+        node("h2", "AI TasksのToDo", content);
+        node(
+          "p",
+          "タスクの正本はpersonal-opsのAI Tasksです。ToDoを完了しても、請求の支払い実績は変わりません。",
+          content,
+        );
+        const report = await api("tasks?page=" + page);
+        if (!report.configured) {
+          node(
+            "p",
+            "AI Tasks未接続です。Macで接続先を設定すると、保存済み請求からToDoが反映されます。",
+            content,
+          );
+          return;
+        }
+        const names = {
+          pending: "未着手",
+          running: "実行中",
+          review: "確認待ち",
+          done: "完了",
+          failed: "失敗",
+          cancelled: "取消",
+        };
+        for (const task of report.tasks) {
+          const card = node("section", null, content, "card");
+          node("h3", task.title, card);
+          node(
+            "p",
+            "期限：" + (task.due_date || "未設定") + " / " + names[task.status],
+            card,
+          );
+          const select = field(
+            card,
+            "status",
+            "ToDoの状態",
+            task.status,
+            "text",
+            [],
+          );
+          for (const [value, label] of Object.entries(names)) {
+            const o = node("option", label, select);
+            o.value = value;
+          }
+          select.value = task.status;
+          button(
+            "ToDoの状態を更新",
+            async () => {
+              await api("task?id=" + encodeURIComponent(task.id), {
+                version: task.version,
+                status: select.value,
+              });
+              message(
+                "AI TasksのToDoを更新しました。支払い実績は変更していません。",
+              );
+              await showTasks(page);
+            },
+            card,
+          );
+          const link = overview.tasks.links.find((x) => x.task_id === task.id);
+          if (link)
+            button("支払いの原本を見る", () => detail(link.record_id), card);
+        }
+        if (!report.tasks.length) node("p", "ToDoはありません。", content);
+        if (page > 0) button("前のページ", () => showTasks(page - 1), content);
+        if (report.next_page !== null)
+          button("次のページ", () => showTasks(report.next_page), content);
+      }
+      $("#retry-sync").onclick = () =>
+        act(async () => {
+          const r = await api("sync", {});
+          message(
+            r.sync_requested
+              ? "同期を再試行します。少し後に「更新」で確認できます。"
+              : "同期処理が稼働していません。Macのサーバーを確認してください。",
+          );
+          await load();
+        });
       $("#new").onclick = () => act(() => uploadChooser("notice", null));
       $("#refresh").onclick = () => act(() => load());
       document.querySelectorAll("[data-tab]").forEach(

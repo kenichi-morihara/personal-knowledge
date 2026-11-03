@@ -21,3 +21,7 @@
 [支払い管理画面](../docs/payment-management.md)で納付書・領収書を本人確認して登録できます。独立して払える期別を1請求とし、年額通知と重ねて計上しません。請求元issuer、対象期間target_period、期別installment、画像参照image_refsを追加できます。
 
 支払いの訂正は元のpaymentsを変更せず、payment_correctionsに固定UUID、action: void、対象payment_id、reason、corrected_atを追記します。取り消された支払いを除外して累計・残額を再計算します。置換は別UUIDの支払いを追加します。請求の訂正はobligation_correctionsに固定UUID、理由、訂正日、訂正前の値を残します。どちらの訂正履歴も追記式です。
+
+請求自体の取消はlifecycle: cancelledとlifecycle_eventsの理由付き履歴で管理します。支払い実績がある・不明な請求は取消不可です。元の金額は保持し、通常の未払い一覧と帳簿から除外します。再開はreopenイベントを追記します。領収書のない支払いはevidence_type: statementまたはowner_reportと具体的なsourceを本人確認のうえ登録できます。
+
+画面・MCPは共有ローカルジャーナルを含めて参照します。Gitへの反映待ちはmake records-status、検証はmake records-checkで確認します。タスク管理の正本はpersonal-opsのAI Tasksです。ToDoの完了を支払い実績へ変換しません。

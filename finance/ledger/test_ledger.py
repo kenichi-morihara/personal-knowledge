@@ -65,6 +65,16 @@ class ProjectionTest(unittest.TestCase):
         self.assertEqual(report['obligations'][0]['amount_remaining'], '200000')
         self.assertEqual(loader.load_string(text)[1], [])
 
+    def test_cancelled_obligation_is_excluded(self):
+        self.record['payment_corrections'] = [dict(id=str(uuid4()), action='void',
+            payment_id=self.record['payments'][0]['id'], reason='Synthetic correction', corrected_at='2026-10-25')]
+        self.record.update(amount_paid='0', amount_remaining='200000', status='unpaid', lifecycle='cancelled',
+            lifecycle_events=[dict(id=str(uuid4()), action='cancel', reason='Duplicate bill', recorded_at='2026-10-25')])
+        self.write()
+        text, report = manager.project(self.root)
+        self.assertEqual(report['obligations'], [])
+        self.assertNotIn('Recorded obligation"', text)
+
     def test_full_payment(self):
         self.record['payments'][0]['amount'] = '200000'
         self.record.update(amount_paid='200000', amount_remaining='0', status='paid')
