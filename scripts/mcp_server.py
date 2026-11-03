@@ -62,6 +62,14 @@ def create_server(root, state, origin, port=8777):
         return json.dumps(store.fetch(id), ensure_ascii=False)
 
     @mcp.tool(annotations=read)
+    def list_obligations(status: str | None = None, due_before: str | None = None) -> str:
+        """List all obligations, including unknown values, sorted by deadline (JST).
+        status: open/unpaid/partial/paid/unknown or omitted. due_before: inclusive YYYY-MM-DD.
+        Read original sources with fetch before recording payments. This never executes a payment.
+        """
+        return json.dumps(store.list_obligations(status, due_before), ensure_ascii=False)
+
+    @mcp.tool(annotations=read)
     def get_template(kind: str) -> str:
         """Get an input template: note, project, balance, obligation, opportunity. This is NOT real data."""
         if kind not in ('note', 'project', 'balance', 'obligation', 'opportunity'):

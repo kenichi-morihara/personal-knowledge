@@ -78,9 +78,35 @@ def extract(lines):
                   currency='JPY' if len(amounts) == 1 else None,
                   due_date=next(iter(deadlines)) if len(deadlines) == 1 else None,
                   fiscal_year=next(iter(years)) if len(years) == 1 else None)
+    # Only labelled short fields become candidates; all require owner confirmation.
+    for field, pattern in (('issuer', r'(?:請求元|発行者|発行元)[:： ]+(.{1,100})'),
+                           ('installment', r'(第[0-9一二三四五六七八九十]+期|[0-9]{1,2}月分)'),
+                           ('target_period', r'(?:対象期間|対象所得年)[:： ]+(.{1,100})')):
+        matches = set(re.findall(pattern, combined))
+        result[field] = next(iter(matches)) if len(matches) == 1 else None
     result['needs_review'] = True
     result['ambiguities'] = [name for name, values in [('category', categories), ('amount_due', amounts), ('due_date', deadlines), ('fiscal_year', years)] if len(values) != 1]
     return result
+
+
+def extract_receipt(lines):
+    texts = [unicodedata.normalize('NFKC', line.get('text', '')) for line in lines
+             if isinstance(line, dict) and line.get('confidence', 0) >= .5]
+    amounts, dates = set(), set()
+    for index, text in enumerate(texts):
+        nearby = ' '.join(texts[index:index + 2])
+        if re.search(r'領収(?:金額|額)|受領(?:金額|額)|納付(?:金額|額)|合計(?:金額)?', text):
+            for m in re.finditer(r'(?:[¥￥]\s*([\d,]+)|([\d,]+)\s*円)', nearby):
+                value = (m[1] or m[2]).replace(',', '')
+                if 0 < int(value) < 10**10:
+                    amounts.add(value)
+        if re.search(r'領収日|受領日|支払日|収納日|取扱日', text):
+            for candidate in texts[index:index + 2]:
+                parsed = parse_date(candidate)
+                if parsed:
+                    dates.add(parsed)
+    return {'amount': next(iter(amounts)) if len(amounts) == 1 else None,
+            'paid_at': next(iter(dates)) if len(dates) == 1 else None}
 
 
 class Captures:
@@ -89,7 +115,11 @@ class Captures:
         self.state.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.state.chmod(0o700)
 
-    def ingest(self, raw):
+    def ingest(self, raw, kind='notice', obligation_id=None, allow_unreadable=False):
+        if kind not in ('notice', 'receipt'):
+            raise ValueError('Invalid capture kind')
+        if obligation_id is not None:
+            UUID(obligation_id)
         if not raw or len(raw) > MAX_IMAGE:
             raise ValueError('画像は15MB以下のJPEGまたはPNGにしてください。')
         extension = '.jpg' if raw.startswith(b'\xff\xd8\xff') else '.png' if raw.startswith(b'\x89PNG\r\n\x1a\n') else None
@@ -109,11 +139,19 @@ class Captures:
             private_write(job_path, json.dumps(job).encode())
             try:
                 # OCR output stays on this Mac. Never put the full text or photograph in Git.
-                lines = self.ocr(image)
+                ocr_failed = False
+                try:
+                    lines = self.ocr(image)
+                except ValueError:
+                    if not allow_unreadable:
+                        raise
+                    lines = []
+                    ocr_failed = True
                 if not isinstance(lines, list) or len(lines) > 5000:
                     raise ValueError('画像の文字認識結果を確認できませんでした。')
                 private_write(self.state / 'ocr' / (digest + '.json'), json.dumps(lines, ensure_ascii=False).encode())
                 fields = extract(lines)
+                receipt = extract_receipt(lines)
                 normalized = ''.join(unicodedata.normalize('NFKC', line.get('text', '')) for line in lines)
                 fingerprint = hashlib.sha256(re.sub(r'\s+', '', normalized).encode()).hexdigest() if normalized.strip() else None
                 similar = None
@@ -143,12 +181,13 @@ class Captures:
                 record_id = str(uuid5(NAMESPACE, digest))
                 path = f'finance/taxes/captures/{digest}.md'
                 meta = dict(id=record_id, type='note', updated_at=now.date().isoformat(),
-                    sources=[dict(reference=f'Androidから本人が送信した納付書画像。SHA-256: {digest}。原画像・OCR全文はMacの撮影用ローカル保存領域。',captured_at=now.date().isoformat())],
-                    capture_status='needs_review', image_sha256=digest, captured_at=now.isoformat(),
+                    sources=[dict(reference=f'本人が送信した納付書または領収書画像。SHA-256: {digest}。原画像・OCR全文はMacの撮影用ローカル保存領域。',captured_at=now.date().isoformat())],
+                    capture_status='needs_review', capture_kind=kind, target_obligation_id=obligation_id,
+                    receipt_fields=receipt, notice_fields=fields, ocr_failed=ocr_failed, image_sha256=digest, captured_at=now.isoformat(),
                     tax_category=fields['category'], fiscal_year=fields['fiscal_year'],
                     amount_due=fields['amount_due'], currency=fields['currency'], due_date=fields['due_date'],
                     amount_paid=None, amount_remaining=None, possible_duplicate_of=similar)
-                body = '# 納付書の撮影記録（要確認）\n\n'
+                body = '# 書類の撮影記録（要確認）\n\n'
                 for label, key in [('税目候補', 'category'), ('請求額候補（円）', 'amount_due'), ('課税年度候補', 'fiscal_year'), ('納期限候補', 'due_date')]:
                     value = fields[key]
                     body += f'- {label}：{value if value is not None else "未確認"}\n'

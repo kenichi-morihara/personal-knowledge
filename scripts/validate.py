@@ -115,6 +115,45 @@ def validate(root):
                         complete = False
                     else:
                         total += amount
+                corrections = data.get('payment_corrections', [])
+                require(isinstance(corrections, list), 'payment_corrections must be a list')
+                payment_ids = {p['id'] for p in payments if isinstance(p, dict) and isinstance(p.get('id'), str)} if isinstance(payments, list) else set()
+                voided = set()
+                for correction in corrections if isinstance(corrections, list) else []:
+                    if not isinstance(correction, dict):
+                        require(False, 'correction must be a mapping')
+                        continue
+                    unique_id(correction.get('id'))
+                    payment_id = correction.get('payment_id')
+                    require(isinstance(payment_id, str) and payment_id in payment_ids and payment_id not in voided,
+                            'correction must refer to a distinct existing payment')
+                    require(correction.get('action') == 'void' and isinstance(correction.get('reason'), str)
+                            and bool(correction.get('reason', '').strip()) and valid_date(correction.get('corrected_at')),
+                            'correction requires void action, reason and corrected_at')
+                    if isinstance(payment_id, str):
+                        voided.add(payment_id)
+                if complete and isinstance(payments, list):
+                    total = sum((Decimal(p['amount']) for p in payments if str(p.get('id')) not in voided), Decimal(0))
+                for field in ('issuer', 'target_period', 'installment'):
+                    require(data.get(field) is None or (isinstance(data[field], str) and len(data[field]) <= 200), f'{field} must be a short string or null')
+                image_refs = data.get('image_refs', [])
+                require(isinstance(image_refs, list), 'image_refs must be a list')
+                for digest in image_refs if isinstance(image_refs, list) else []:
+                    require(isinstance(digest, str) and bool(re.fullmatch('[0-9a-f]{64}', digest)), 'invalid image reference')
+                amendments = data.get('obligation_corrections', [])
+                require(isinstance(amendments, list), 'obligation_corrections must be a list')
+                for amendment in amendments if isinstance(amendments, list) else []:
+                    if not isinstance(amendment, dict):
+                        require(False, 'obligation correction must be a mapping')
+                        continue
+                    unique_id(amendment.get('id'))
+                    require(valid_date(amendment.get('corrected_at')) and isinstance(amendment.get('reason'), str)
+                            and bool(amendment.get('reason', '').strip()) and isinstance(amendment.get('previous'), dict),
+                            'obligation correction requires date, reason and previous fields')
+                for payment in payments if isinstance(payments, list) else []:
+                    if isinstance(payment, dict):
+                        image = payment.get('image_sha256')
+                        require(image is None or (isinstance(image, str) and bool(re.fullmatch('[0-9a-f]{64}', image))), 'invalid payment image reference')
                 due, opening, paid, remaining = (values[k] for k in ('amount_due', 'opening_paid', 'amount_paid', 'amount_remaining'))
                 expected_paid = opening + total if opening is not None and complete else None
                 require(paid == expected_paid, 'amount_paid must equal opening_paid + payments, or null when unknown')

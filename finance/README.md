@@ -15,3 +15,9 @@
 - `amount_paid = opening_paid + paymentsの合計`、`amount_remaining = amount_due - amount_paid`を同時に更新する。請求額や開始時点累計が不明なら、算出できない値はnullのままにする。
 - `status`は未確認`unknown`、未払`unpaid`、一部支払`partial`、完了`paid`。確認済み金額から決める。過払い・還付・請求変更は自動処理せず事実確認を行う。
 - 支払い記録は「支払った」という本人の依頼・証憑に基づく記帳であり、納税の実行ではない。
+
+## スマホでの管理と訂正
+
+[支払い管理画面](../docs/payment-management.md)で納付書・領収書を本人確認して登録できます。独立して払える期別を1請求とし、年額通知と重ねて計上しません。請求元issuer、対象期間target_period、期別installment、画像参照image_refsを追加できます。
+
+支払いの訂正は元のpaymentsを変更せず、payment_correctionsに固定UUID、action: void、対象payment_id、reason、corrected_atを追記します。取り消された支払いを除外して累計・残額を再計算します。置換は別UUIDの支払いを追加します。請求の訂正はobligation_correctionsに固定UUID、理由、訂正日、訂正前の値を残します。どちらの訂正履歴も追記式です。

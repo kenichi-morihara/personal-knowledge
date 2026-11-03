@@ -111,37 +111,62 @@ class Store:
                             'path': name, 'sha256': hashlib.sha256(content.encode()).hexdigest()}
         raise ValueError('Record not found; search for its UUID first')
 
+    def sync_status(self):
+        # Compare cached remote refs only; the UI labels this as the last known remote state.
+        with self.locked():
+            try:
+                dirty = bool(self.git('status', '--porcelain'))
+                ahead = int(self.git('rev-list', '--count', 'origin/main..HEAD'))
+                behind = int(self.git('rev-list', '--count', 'HEAD..origin/main'))
+                return {'synced': not dirty and ahead == 0 and behind == 0,
+                        'local_changes': dirty, 'ahead': ahead, 'behind': behind,
+                        'remote_checked': False}
+            except ValueError:
+                return {'synced': False, 'remote_checked': False}
+
     def put(self, path, content, expected_sha256):
-        target = self.path(path)
-        data = self.parse(content)
-        if SECRET.search(content):
-            raise ValueError('Possible credential detected; do not store secrets in records')
+        return self.put_many([dict(path=path, content=content, expected_sha256=expected_sha256)])
+
+    def put_many(self, changes):
+        """Validate and commit a related group atomically; all writers use the same lock."""
+        if not changes or len(changes) > 10 or len({c['path'] for c in changes}) != len(changes):
+            raise ValueError('Provide 1–10 distinct record paths')
+        prepared = []
         today = datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat()
-        if data.get('updated_at') != today:
-            raise ValueError(f'updated_at must be the current Asia/Tokyo date: {today}')
+        for change in changes:
+            target = self.path(change['path'])
+            data = self.parse(change['content'])
+            if SECRET.search(change['content']):
+                raise ValueError('Possible credential detected; do not store secrets in records')
+            if data.get('updated_at') != today:
+                raise ValueError(f'updated_at must be the current Asia/Tokyo date: {today}')
+            prepared.append((change, target, data))
         with self.locked():
             if self.git('status', '--porcelain'):
                 raise ValueError('Working tree has local changes; finish or preserve them before MCP writes')
             if self.git('branch', '--show-current') != 'main':
                 raise ValueError('MCP writes require the main branch')
-            # Never merge or overwrite local edits. An upstream update requires a local fast-forward.
             self.git('fetch', '--quiet', 'origin', 'main')
             if self.git('rev-list', '--count', 'HEAD..origin/main') != '0':
                 raise ValueError('Remote has new commits; fast-forward the checkout locally, then fetch the record again')
-            before = target.read_text() if target.exists() else None
-            actual = hashlib.sha256(before.encode()).hexdigest() if before is not None else ''
-            if expected_sha256 != actual:
-                raise ValueError('Record changed or already exists; fetch again before updating')
-            if before is not None:
-                previous = self.parse(before)
-                if data['id'] != previous['id'] or data.get('type') != previous.get('type'):
-                    raise ValueError('Record UUID and type cannot change')
-                if previous.get('type') == 'balance':
-                    raise ValueError('Balances are append-only snapshots; create a new UUID and path')
-                if previous.get('type') == 'obligation':
-                    old_payments = previous.get('payments', [])
-                    if data.get('payments', [])[:len(old_payments)] != old_payments:
-                        raise ValueError('Existing payment history is append-only; correct it locally with a reason')
+            before = {}
+            for change, target, data in prepared:
+                old = target.read_text() if target.exists() else None
+                before[change['path']] = old
+                actual = hashlib.sha256(old.encode()).hexdigest() if old is not None else ''
+                if change['expected_sha256'] != actual:
+                    raise ValueError('Record changed or already exists; fetch again before updating')
+                if old is not None:
+                    previous = self.parse(old)
+                    if data['id'] != previous['id'] or data.get('type') != previous.get('type'):
+                        raise ValueError('Record UUID and type cannot change')
+                    if previous.get('type') == 'balance':
+                        raise ValueError('Balances are append-only snapshots; create a new UUID and path')
+                    if previous.get('type') == 'obligation':
+                        for field in ('payments', 'payment_corrections', 'obligation_corrections'):
+                            history = previous.get(field, [])
+                            if data.get(field, [])[:len(history)] != history:
+                                raise ValueError('Existing payment history is append-only; correct it with a reason')
             with tempfile.TemporaryDirectory() as directory:
                 draft = Path(directory)
                 for name in self.git('ls-files', '-z').split('\0'):
@@ -153,34 +178,39 @@ class Store:
                     dst = draft / name
                     dst.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(src, dst)
-                candidate = draft / path
-                candidate.parent.mkdir(parents=True, exist_ok=True)
-                candidate.write_text(content)
+                for change, _, _ in prepared:
+                    candidate = draft / change['path']
+                    candidate.parent.mkdir(parents=True, exist_ok=True)
+                    candidate.write_text(change['content'])
                 try:
                     _, errors = validate(draft)
                 except Exception:
                     raise ValueError('Record validation failed; check metadata types and YAML') from None
                 if errors:
                     raise ValueError('Validation failed: ' + '; '.join(errors[:10]))
-            if before == content:
-                return {'path': path, 'changed': False, 'commit': self.git('rev-parse', 'HEAD')}
+            if all(before[c['path']] == c['content'] for c, _, _ in prepared):
+                return {'path': changes[0]['path'], 'changed': False, 'commit': self.git('rev-parse', 'HEAD')}
             if self.git('status', '--porcelain'):
                 raise ValueError('Working tree changed during validation; retry after local review')
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(mode='w', dir=target.parent, delete=False) as staged:
-                staged.write(content)
-                temporary = Path(staged.name)
-            os.replace(temporary, target)
+            paths = [c['path'] for c, _, _ in prepared]
             try:
-                self.git('diff', '--check', '--', path)
-                self.git('add', '--', path)
-                self.git('commit', '-m', f'Update knowledge record {data["id"]}', '--', path)
+                for change, target, _ in prepared:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    with tempfile.NamedTemporaryFile(mode='w', dir=target.parent, delete=False) as staged:
+                        staged.write(change['content'])
+                        temporary = Path(staged.name)
+                    os.replace(temporary, target)
+                self.git('diff', '--check', '--', *paths)
+                self.git('add', '--', *paths)
+                self.git('commit', '-m', f'Update knowledge record {prepared[0][2]["id"]}', '--', *paths)
             except Exception:
-                self.git('reset', '--quiet', 'HEAD', '--', path)
-                if before is None:
-                    target.unlink(missing_ok=True)
-                else:
-                    target.write_text(before)
+                self.git('reset', '--quiet', 'HEAD', '--', *paths)
+                for change, target, _ in prepared:
+                    old = before[change['path']]
+                    if old is None:
+                        target.unlink(missing_ok=True)
+                    else:
+                        target.write_text(old)
                 raise
             commit = self.git('rev-parse', 'HEAD')
             try:
@@ -188,5 +218,34 @@ class Store:
                 synced = True
             except ValueError:
                 synced = False
-            return {'id': data['id'], 'path': path, 'changed': True, 'commit': commit, 'synced': synced,
+            return {'id': prepared[0][2]['id'], 'path': paths[0], 'paths': paths,
+                    'changed': True, 'commit': commit, 'synced': synced,
                     'message': 'Saved and pushed' if synced else 'Saved locally; push failed. Sync locally before relying on GitHub.'}
+
+    def list_obligations(self, status=None, due_before=None):
+        from datetime import date, timedelta
+        if status not in (None, 'open', 'unknown', 'unpaid', 'partial', 'paid'):
+            raise ValueError('Invalid obligation status')
+        if due_before is not None:
+            if date.fromisoformat(due_before).isoformat() != due_before:
+                raise ValueError('due_before requires YYYY-MM-DD')
+        today = datetime.now(ZoneInfo('Asia/Tokyo')).date()
+        rows = []
+        with self.locked():
+            for path, content, data in self.records():
+                if data.get('type') != 'obligation':
+                    continue
+                if status == 'open' and data.get('status') not in ('unpaid', 'partial', 'unknown'):
+                    continue
+                if status not in (None, 'open') and data.get('status') != status:
+                    continue
+                due = data.get('due_date')
+                if due_before is not None and (not due or due > due_before):
+                    continue
+                bucket = ('paid' if data.get('status') == 'paid' else 'unknown' if data.get('status') == 'unknown'
+                          else 'undated' if not due else 'overdue' if due < today.isoformat()
+                          else 'soon' if due <= (today + timedelta(days=30)).isoformat() else 'later')
+                rows.append(dict(data, path=path, sha256=hashlib.sha256(content.encode()).hexdigest(),
+                                 url=self.url(path), bucket=bucket))
+        return {'as_of': today.isoformat(), 'timezone': 'Asia/Tokyo',
+                'obligations': sorted(rows, key=lambda r: (r.get('due_date') or '9999', r['id']))}

@@ -14,6 +14,9 @@ import tempfile
 from beancount import loader
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from obligations import effective_payments
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
@@ -68,7 +71,7 @@ def project(root):
                       f'  source-file: {quoted(relative)}',
                       f'  {account} {opening} {currency}',
                       f'  Equity:UnallocatedPayments {-opening} {currency}', '']
-        for payment in data['payments']:
+        for payment in effective_payments(data):
             amount = Decimal(payment['amount'])
             lines += [f'{updated} * "Recorded payment"',
                       f'  payment-id: {quoted(payment["id"])}',
@@ -82,6 +85,7 @@ def project(root):
         lines += [f'{assertion_date} balance {account} {-remaining} {currency}', '']
         summary.append(dict(id=data['id'], source=relative, updated_at=updated,
                             due_date=data.get('due_date'), currency=currency,
+                            issuer=data.get('issuer'), installment=data.get('installment'), target_period=data.get('target_period'),
                             amount_due=str(due), amount_paid=data['amount_paid'],
                             amount_remaining=str(remaining), account=account))
     opening_date = min((r['updated_at'] for r in summary), default=datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat())

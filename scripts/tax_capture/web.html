@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#193d34" />
+    <title>支払い管理</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <style>
+      :root {
+        font:
+          16px system-ui,
+          sans-serif;
+        color: #203d34;
+        background: #f3f5f1;
+        line-height: 1.6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 880px;
+        margin: auto;
+        padding: 24px 18px 64px;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 22px;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 0 0 10px;
+      }
+      p {
+        overflow-wrap: anywhere;
+      }
+      small,
+      .muted {
+        color: #5d6e63;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+      }
+      nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+      }
+      button,
+      .button {
+        border: 0;
+        border-radius: 10px;
+        padding: 13px 16px;
+        font: inherit;
+        cursor: pointer;
+        background: #214e3e;
+        color: white;
+        min-height: 46px;
+      }
+      button.secondary {
+        background: #e3eae1;
+        color: #203d34;
+      }
+      button.danger {
+        background: #8b3939;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: wait;
+      }
+      nav button[aria-current="true"] {
+        box-shadow: 0 0 0 3px #b2c6b1;
+      }
+      input,
+      select,
+      textarea {
+        display: block;
+        width: 100%;
+        border: 1px solid #a7b8aa;
+        border-radius: 8px;
+        padding: 12px;
+        font: inherit;
+        background: white;
+        color: #203d34;
+      }
+      label {
+        display: block;
+        margin: 14px 0 6px;
+      }
+      label:has(input[type="checkbox"]) {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+      }
+      section.card,
+      .card {
+        background: white;
+        border: 1px solid #dce4d9;
+        border-radius: 16px;
+        padding: 20px;
+        margin: 14px 0;
+        overflow-wrap: anywhere;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+      .amount {
+        font-size: 26px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .badge {
+        display: inline-block;
+        border-radius: 6px;
+        padding: 2px 9px;
+        background: #e8eee7;
+        font-size: 13px;
+      }
+      .overdue {
+        color: #a1322c;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 20px;
+      }
+      .preview {
+        width: 100%;
+        max-height: 65vh;
+        object-fit: contain;
+        background: #e9ede7;
+        border-radius: 10px;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      .actions button {
+        flex: 1;
+      }
+      #message {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      #message:not(:empty) {
+        padding: 16px;
+        background: #fff3d8;
+        border-radius: 10px;
+        margin: 16px 0;
+      }
+      #sync {
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .upload {
+        width: 100%;
+        padding: 19px;
+      }
+      details summary {
+        cursor: pointer;
+        padding: 8px;
+      }
+      footer {
+        margin-top: 30px;
+        font-size: 13px;
+        color: #5d6e63;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      a {
+        color: #214e3e;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+        margin: 0;
+        min-width: 0;
+      }
+      @media (max-width: 620px) {
+        .split {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .preview {
+          max-height: 45vh;
+        }
+        header {
+          align-items: flex-start;
+        }
+        .row {
+          align-items: flex-start;
+        }
+        .amount {
+          font-size: 23px;
+        }
+        main {
+          padding: 18px 14px 48px;
+        }
+        .card {
+          padding: 16px;
+        }
+        nav button {
+          flex: 1;
+          padding: 11px 8px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <small>PERSONAL KNOWLEDGE</small>
+          <h1>支払い管理</h1>
+        </div>
+        <button id="refresh" class="secondary">更新</button>
+      </header>
+      <div id="sync"></div>
+      <nav aria-label="表示切替">
+        <button data-tab="open">未払い</button
+        ><button data-tab="pending">確認待ち</button
+        ><button data-tab="paid">支払済み</button>
+      </nav>
+      <button id="new" class="upload">＋ 納付書を登録する</button>
+      <div id="message" role="status" aria-live="polite"></div>
+      <div id="content"></div>
+      <input
+        id="camera"
+        type="file"
+        accept="image/jpeg,image/png"
+        capture="environment"
+        hidden
+      /><input id="gallery" type="file" accept="image/jpeg,image/png" hidden />
+      <footer>
+        撮影だけでは請求や支払いは確定しません。写真・OCR全文はMac内に保存します。Mac起動中に使えます。
+        <form method="post" action="/logout">
+          <input id="logout-csrf" type="hidden" name="csrf" /><button
+            class="secondary"
+          >
+            ログアウト
+          </button>
+        </form>
+      </footer>
+    </main>
+    <script>
+      const csrf = __CSRF_JSON__;
+      const $ = (s) => document.querySelector(s),
+        content = $("#content");
+      $("#logout-csrf").value = csrf;
+      let overview = null,
+        tab = "open",
+        busy = false,
+        uploadKind = "notice",
+        uploadTarget = null,
+        lastFile = null,
+        currentRecord = null;
+      const labels = {
+        overdue: "期限超過",
+        soon: "30日以内",
+        later: "それ以降",
+        undated: "期限未確認",
+        unknown: "金額・支払い状況の確認が必要",
+        paid: "支払済み",
+      };
+      const yen = (v, c = "JPY") =>
+        v == null
+          ? "未確認"
+          : Number(v).toLocaleString("ja-JP") +
+            (c === "JPY" ? "円" : " " + (c || "通貨未確認"));
+      function node(tag, text, parent, cls) {
+        const e = document.createElement(tag);
+        if (text != null) e.textContent = text;
+        if (cls) e.className = cls;
+        if (parent) parent.append(e);
+        return e;
+      }
+      function button(text, fn, parent, cls = "secondary") {
+        const e = node("button", text, parent, cls);
+        e.type = "button";
+        e.onclick = () => act(fn);
+        return e;
+      }
+      function message(text) {
+        $("#message").textContent = text;
+      }
+      async function api(path, body) {
+        const r = await fetch("/api/" + path, {
+          method: body ? "POST" : "GET",
+          headers: body
+            ? { "Content-Type": "application/json", "X-Capture-CSRF": csrf }
+            : {},
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        const d = await r.json();
+        if (r.status === 401) {
+          message("ログインし直してください。");
+          location.href = "/";
+          throw Error("ログインが必要です。");
+        }
+        if (!r.ok) throw Error(d.error || "処理できませんでした。");
+        return d;
+      }
+      async function act(fn) {
+        if (busy) return;
+        busy = true;
+        document.querySelectorAll("button").forEach((e) => (e.disabled = true));
+        try {
+          await fn();
+        } catch (e) {
+          message(
+            e.message +
+              "\n画面を再読込する前に、入力内容や写真を手元に残してください。",
+          );
+        } finally {
+          busy = false;
+          document
+            .querySelectorAll("button")
+            .forEach((e) => (e.disabled = false));
+        }
+      }
+      function saved(r) {
+        message(
+          r.synced
+            ? "GitHubにも保存済みです。"
+            : "Macに保存済みです。GitHubへの同期は要対応です。MacでGit状態を確認してください。",
+        );
+      }
+      async function load() {
+        overview = await api("overview");
+        $("#sync").textContent = overview.sync.synced
+          ? "保存済み · 前回確認時点のGitHubと一致"
+          : "保存状態：要対応 · Macの変更またはGitHubへの未同期があります";
+        render();
+      }
+      function render() {
+        currentRecord = null;
+        content.replaceChildren();
+        document
+          .querySelectorAll("[data-tab]")
+          .forEach((e) =>
+            e.setAttribute("aria-current", String(e.dataset.tab === tab)),
+          );
+        if (tab === "pending") {
+          node("h2", "確認待ち " + overview.pending.length + "件", content);
+          for (const r of overview.pending) {
+            const c = node("section", null, content, "card");
+            node(
+              "h3",
+              r.capture_kind === "receipt" ? "領収書" : "納付書・関連資料",
+              c,
+            );
+            node(
+              "p",
+              (r.tax_category || "税目未確認") + " · " + yen(r.amount_due),
+              c,
+            );
+            if (r.possible_duplicate_of)
+              node("p", "似た書類があります。確認してください。", c, "overdue");
+            button("写真と内容を確認", () => openCapture(r.id), c);
+          }
+          if (!overview.pending.length)
+            node("p", "確認待ちの書類はありません。", content);
+          return;
+        }
+        const rows = overview.obligations.filter((r) =>
+          tab === "paid" ? r.status === "paid" : r.status !== "paid",
+        );
+        node(
+          "h2",
+          (tab === "paid" ? "支払済み" : "未払い・要確認") +
+            " " +
+            rows.length +
+            "件",
+          content,
+        );
+        if (!rows.length)
+          node(
+            "p",
+            "まだ登録されていません。「納付書を登録する」から撮影できます。",
+            content,
+          );
+        for (const group of tab === "paid"
+          ? ["paid"]
+          : ["overdue", "soon", "later", "undated", "unknown"]) {
+          const rs = rows.filter((r) => r.bucket === group);
+          if (!rs.length) continue;
+          node(
+            "h3",
+            labels[group],
+            content,
+            group === "overdue" ? "overdue" : "",
+          );
+          for (const r of rs) {
+            const c = node("section", null, content, "card");
+            const row = node("div", null, c, "row");
+            const l = node("div", null, row);
+            node(
+              "h3",
+              [
+                r.category,
+                r.fiscal_year ? `${r.fiscal_year}年度` : null,
+                r.installment,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "請求",
+              l,
+            );
+            node("small", r.issuer || "請求元未確認", l);
+            node("div", yen(r.amount_remaining, r.currency), row, "amount");
+            node(
+              "p",
+              "納期限：" +
+                (r.due_date || "未確認") +
+                (r.status === "partial" ? " · 一部支払済み" : ""),
+              c,
+            );
+            button("詳細・支払いを記録", () => detail(r.id), c);
+          }
+        }
+      }
+      function image(d, parent) {
+        const e = node("img", null, parent, "preview");
+        e.src = "/api/image?id=" + encodeURIComponent(d);
+        e.alt = "確認する書類";
+        e.onerror = () => {
+          e.hidden = true;
+          node(
+            "p",
+            "画像を表示できません。Macの画像保管状態を確認し、手元の用紙と照合してください。",
+            parent,
+          );
+        };
+        return e;
+      }
+      function field(
+        parent,
+        name,
+        label,
+        value,
+        type = "text",
+        options = null,
+      ) {
+        const wrap = node("label", label, parent);
+        let input;
+        if (options) {
+          input = node("select", null, wrap);
+          for (const o of options) {
+            const opt = node("option", o || "未確認", input);
+            opt.value = o;
+          }
+        } else {
+          input = node("input", null, wrap);
+          input.type = type;
+          if (type === "number") {
+            input.min = "1";
+            input.step = "1";
+          }
+          input.maxLength = 200;
+        }
+        input.name = name;
+        input.value = value ?? "";
+        return input;
+      }
+      function check(parent, name, label) {
+        const l = node("label", null, parent),
+          i = node("input", null, l);
+        i.type = "checkbox";
+        i.name = name;
+        l.append(document.createTextNode(label));
+        return i;
+      }
+      function values(form) {
+        return Object.fromEntries(new FormData(form));
+      }
+      function uploadChooser(kind, target) {
+        uploadKind = kind;
+        uploadTarget = target;
+        content.replaceChildren();
+        button("← 一覧に戻る", () => load(), content);
+        node(
+          "h2",
+          kind === "receipt" ? "領収書を撮影" : "納付書を撮影",
+          content,
+        );
+        node(
+          "p",
+          "明るい場所で用紙全体を1枚ずつ撮影してください。JPEG・PNG、15MB以下。",
+          content,
+        );
+        button("カメラで撮る", () => $("#camera").click(), content);
+        button("保存済みの写真を選ぶ", () => $("#gallery").click(), content);
+      }
+      async function send(file) {
+        if (!file) return;
+        lastFile = file;
+        if (file.size > 15728640) throw Error("画像は15MB以下にしてください。");
+        message("写真を保存して読み取り中です…");
+        const query = new URLSearchParams({ kind: uploadKind });
+        if (uploadTarget) query.set("target", uploadTarget);
+        let r;
+        try {
+          const response = await fetch("/capture?" + query, {
+            method: "POST",
+            headers: { "X-Capture-CSRF": csrf },
+            body: file,
+          });
+          r = await response.json();
+          if (!response.ok)
+            throw Error(r.error || "撮影を保存できませんでした。");
+        } catch (e) {
+          button("同じ写真を再送する", () => send(lastFile), content);
+          throw e;
+        }
+        saved(r);
+        lastFile = null;
+        await openCapture(r.id);
+      }
+      async function openCapture(id) {
+        const r = await api("record?id=" + encodeURIComponent(id));
+        if (r.data.capture_status === "reviewed") {
+          message("この写真は確認・登録済みです。");
+          if (r.data.confirmed_record_id)
+            return detail(r.data.confirmed_record_id);
+          return load();
+        }
+        if (r.data.capture_kind === "receipt") return receipt(r);
+        return notice(r);
+      }
+      function captureHeader(r, title) {
+        content.replaceChildren();
+        currentRecord = r;
+        button("← 一覧に戻る", () => load(), content);
+        node("h2", title, content);
+        if (r.data.ocr_failed)
+          node(
+            "p",
+            "文字を読み取れませんでした。写真と照合して手入力してください。",
+            content,
+            "overdue",
+          );
+        const split = node("div", null, content, "split");
+        image(r.data.image_sha256, split);
+        return node("div", null, split);
+      }
+      function notice(r) {
+        const host = captureHeader(r, "納付書の内容を確認");
+        const f = node("form", null, host);
+        f.onsubmit = (e) => e.preventDefault();
+        const d = r.data.review_draft ||
+          r.data.notice_fields || {
+            category: r.data.tax_category,
+            fiscal_year: r.data.fiscal_year,
+            amount_due: r.data.amount_due,
+            due_date: r.data.due_date,
+          };
+        field(f, "category", "税目", d.category, "text", [
+          "",
+          "住民税",
+          "所得税",
+          "消費税",
+          "個人事業税",
+          "国民健康保険",
+          "国民年金",
+        ]);
+        field(f, "issuer", "請求元・自治体", d.issuer);
+        field(
+          f,
+          "fiscal_year",
+          "課税年度（西暦、分かる場合）",
+          d.fiscal_year,
+          "number",
+        );
+        field(f, "target_period", "対象期間・所得年", d.target_period);
+        field(f, "installment", "期別（例：第3期・11月分）", d.installment);
+        field(
+          f,
+          "amount_due",
+          "この用紙で払う金額（円）",
+          d.amount_due,
+          "number",
+        );
+        field(
+          f,
+          "due_date",
+          "この用紙の納期限（不明なら空欄）",
+          d.due_date,
+          "date",
+        );
+        const unpaid = check(
+          f,
+          "unpaid",
+          "この金額は未払いであることを確認した",
+        );
+        const independent = check(
+          f,
+          "independent",
+          "この用紙は単独で支払える。年額通知・全期前納と各期の二重登録ではない",
+        );
+        if (r.data.possible_duplicate_of)
+          node(
+            "p",
+            "似た書類が保存されています。下の関連資料として紐づける操作も確認してください。",
+            f,
+            "overdue",
+          );
+        const payload = (action) => ({
+          sha256: r.sha256,
+          action,
+          fields: values(f),
+          confirmed_unpaid: unpaid.checked,
+          independently_payable: independent.checked,
+        });
+        const actions = node("div", null, f, "actions");
+        button(
+          "確認待ちで保存",
+          async () => {
+            saved(await api("review?id=" + r.id, payload("draft")));
+            await load();
+            tab = "pending";
+            render();
+          },
+          actions,
+        );
+        button(
+          "未払いとして登録",
+          async () => {
+            const p = payload("create");
+            const result = await api("review?id=" + r.id, p);
+            if (result.needs_duplicate_review)
+              return duplicate(result, p, async (x) => {
+                const done = await api("review?id=" + r.id, x);
+                saved(done);
+                await detail(done.id);
+              });
+            saved(result);
+            await detail(result.id);
+          },
+          actions,
+          "",
+        );
+        const related = node("details", null, host, "card");
+        node("summary", "年額通知・重複写真を既存の請求に紐づける", related);
+        const select = field(related, "target", "関連する請求", "", "text", []);
+        const empty = node("option", "請求を選択", select);
+        empty.value = "";
+        for (const o of overview?.obligations || []) {
+          const e = node(
+            "option",
+            [
+              o.category,
+              o.issuer,
+              o.fiscal_year,
+              o.installment,
+              yen(o.amount_due),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            select,
+          );
+          e.value = o.id;
+        }
+        node(
+          "small",
+          "新しい未払額は追加せず、写真を関連資料として保存します。複数期の通知は該当する請求の1つに紐づけて参照できます。",
+          related,
+        );
+        button(
+          "関連資料として保存",
+          async () => {
+            const result = await api("review?id=" + r.id, {
+              sha256: r.sha256,
+              action: "link",
+              target_id: select.value,
+            });
+            saved(result);
+            await detail(result.id);
+          },
+          related,
+        );
+        const reason = field(
+          host,
+          "reason",
+          "管理対象外・重複で除外する理由",
+          "",
+        );
+        button(
+          "一覧から除外する",
+          async () => {
+            saved(
+              await api("review?id=" + r.id, {
+                sha256: r.sha256,
+                action: "dismiss",
+                reason: reason.value,
+              }),
+            );
+            await load();
+          },
+          host,
+        );
+      }
+      function duplicate(result, payload, done) {
+        message(
+          "似た登録があります。対象・年度・期別・金額を照合してください。年額通知や同じ領収書を二重登録しないでください。",
+        );
+        const box = node("section", null, content, "card");
+        node("h3", "重複候補", box);
+        for (const r of result.candidates)
+          node(
+            "p",
+            [
+              r.category,
+              r.issuer,
+              r.installment,
+              r.paid_at,
+              yen(r.amount_due ?? r.amount),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            box,
+          );
+        const reason = field(
+          box,
+          "reason",
+          "別の請求・支払いと確認した理由",
+          "",
+        );
+        button(
+          "別のものと確認して登録",
+          () =>
+            done({
+              ...payload,
+              distinct_confirmed: true,
+              distinct_reason: reason.value,
+            }),
+          box,
+        );
+        button("登録をやめて一覧へ", () => load(), box);
+      }
+      async function detail(id) {
+        const r = await api("record?id=" + encodeURIComponent(id));
+        currentRecord = r;
+        const d = r.data;
+        content.replaceChildren();
+        button("← 一覧に戻る", () => load(), content);
+        node(
+          "h2",
+          [d.category, d.installment].filter(Boolean).join(" · "),
+          content,
+        );
+        node(
+          "p",
+          [
+            d.issuer,
+            d.fiscal_year ? `${d.fiscal_year}年度` : null,
+            d.target_period,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          content,
+        );
+        const c = node("section", null, content, "card");
+        node("small", "未払額", c);
+        node("div", yen(d.amount_remaining, d.currency), c, "amount");
+        node(
+          "p",
+          "請求額 " +
+            yen(d.amount_due, d.currency) +
+            " / 支払済額 " +
+            yen(d.amount_paid, d.currency),
+          c,
+        );
+        node("p", "納期限：" + (d.due_date || "未確認"), c);
+        if (d.status !== "paid")
+          button(
+            "領収書から支払いを記録",
+            () => uploadChooser("receipt", id),
+            c,
+            "",
+          );
+        button("請求内容を理由付きで訂正", () => amend(r), c);
+        node("h3", "支払い履歴", content);
+        const voided = new Set(
+          (d.payment_corrections || []).map((x) => x.payment_id),
+        );
+        for (const p of d.payments || []) {
+          const row = node("section", null, content, "card");
+          node(
+            "p",
+            p.paid_at +
+              " · " +
+              yen(p.amount, d.currency) +
+              " · " +
+              (p.method || "方法未確認") +
+              (voided.has(p.id) ? " · 取消済み" : ""),
+            row,
+          );
+          node(
+            "small",
+            p.image_sha256 ? "領収書と本人確認に基づく記録" : p.source,
+            row,
+          );
+          if (p.image_sha256) {
+            const a = node("a", "領収書を開く", row);
+            a.href = "/api/image?id=" + p.image_sha256;
+            a.target = "_blank";
+            a.rel = "noopener";
+          }
+          if (!voided.has(p.id)) {
+            const details = node("details", null, row);
+            node("summary", "この支払いを訂正する", details);
+            node(
+              "small",
+              "元の記録を残し、正しい値への置き換えか取消を記録します。領収書と照合してください。",
+              details,
+            );
+            const reason = field(details, "reason", "訂正理由", "");
+            const amount = field(
+              details,
+              "amount",
+              "訂正後の支払金額（円）",
+              p.amount,
+              "number",
+            );
+            const paidAt = field(
+              details,
+              "paid_at",
+              "訂正後の支払日",
+              p.paid_at,
+              "date",
+            );
+            const method = field(
+              details,
+              "method",
+              "訂正後の支払い方法",
+              p.method,
+            );
+            const operation = crypto.randomUUID();
+            button(
+              "訂正値で置き換える",
+              async () => {
+                const payload = {
+                  sha256: r.sha256,
+                  payment_id: p.id,
+                  reason: reason.value,
+                  operation_id: operation,
+                  replacement: {
+                    amount: amount.value,
+                    paid_at: paidAt.value,
+                    method: method.value,
+                  },
+                };
+                const result = await api("correct?id=" + id, payload);
+                if (result.needs_duplicate_review)
+                  return duplicate(result, payload, async (x) => {
+                    saved(await api("correct?id=" + id, x));
+                    await detail(id);
+                  });
+                saved(result);
+                await detail(id);
+              },
+              details,
+            );
+            button(
+              "理由を残して取り消す",
+              async () => {
+                saved(
+                  await api("correct?id=" + id, {
+                    sha256: r.sha256,
+                    payment_id: p.id,
+                    reason: reason.value,
+                    operation_id: operation,
+                  }),
+                );
+                await detail(id);
+              },
+              details,
+              "danger",
+            );
+          }
+        }
+        for (const c of d.payment_corrections || [])
+          node("p", "訂正 " + c.corrected_at + "：" + c.reason, content);
+        for (const x of d.obligation_corrections || [])
+          node("p", "請求訂正 " + x.corrected_at + "：" + x.reason, content);
+        node("h3", "納付書・関連資料", content);
+        for (const digest of d.image_refs || []) image(digest, content);
+        node("h3", "出典", content);
+        for (const s of d.sources || [])
+          node(
+            "p",
+            s.captured_at +
+              " · " +
+              s.reference.replace(
+                /画像SHA-256: [0-9a-f]{64}/g,
+                "撮影原本をMacに保管",
+              ),
+            content,
+          );
+        node("small", "原本更新日：" + d.updated_at, content);
+      }
+      function amend(r) {
+        content.replaceChildren();
+        button("← 詳細に戻る", () => detail(r.id), content);
+        node("h2", "請求内容の訂正", content);
+        for (const digest of r.data.image_refs || []) image(digest, content);
+        const f = node("form", null, content, "card");
+        f.onsubmit = (e) => e.preventDefault();
+        const d = r.data;
+        field(f, "category", "税目", d.category, "text", [
+          "",
+          "住民税",
+          "所得税",
+          "消費税",
+          "個人事業税",
+          "国民健康保険",
+          "国民年金",
+        ]);
+        field(f, "issuer", "請求元", d.issuer);
+        field(f, "fiscal_year", "課税年度（西暦）", d.fiscal_year, "number");
+        field(f, "target_period", "対象期間・所得年", d.target_period);
+        field(f, "installment", "期別", d.installment);
+        field(f, "amount_due", "請求額（円）", d.amount_due, "number");
+        field(
+          f,
+          "opening_paid",
+          "このアプリの支払い記録より前の確認済み既納額（円）",
+          d.opening_paid,
+          "number",
+        );
+        node(
+          "small",
+          "未払いと確認できた場合だけ0。下の支払い履歴に既にある金額は含めません。",
+          f,
+        );
+        field(f, "due_date", "納期限（不明なら空欄）", d.due_date, "date");
+        const reason = field(f, "reason", "訂正理由", "");
+        const confirmed = check(
+          f,
+          "confirmed",
+          "用紙と金額・期限・既納額を照合した",
+        );
+        const operation = crypto.randomUUID();
+        button(
+          "訂正履歴を残して保存",
+          async () => {
+            const p = {
+              sha256: r.sha256,
+              operation_id: operation,
+              reason: reason.value,
+              confirmed: confirmed.checked,
+              fields: values(f),
+            };
+            const result = await api("amend?id=" + r.id, p);
+            if (result.needs_duplicate_review)
+              return duplicate(result, p, async (x) => {
+                const done = await api("amend?id=" + r.id, x);
+                saved(done);
+                await detail(r.id);
+              });
+            saved(result);
+            await detail(r.id);
+          },
+          f,
+          "",
+        );
+      }
+      async function receipt(r) {
+        const record = await api(
+          "record?id=" + encodeURIComponent(r.data.target_obligation_id),
+        );
+        const host = captureHeader(r, "領収書の内容を確認");
+        node(
+          "p",
+          "対象：" +
+            [record.data.category, record.data.issuer, record.data.installment]
+              .filter(Boolean)
+              .join(" · ") +
+            " / 残額 " +
+            yen(record.data.amount_remaining),
+          host,
+        );
+        const f = node("form", null, host);
+        f.onsubmit = (e) => e.preventDefault();
+        const d = r.data.review_draft || r.data.receipt_fields || {};
+        field(f, "amount", "支払金額（円）", d.amount, "number");
+        field(f, "paid_at", "実際の支払日", d.paid_at, "date");
+        field(f, "method", "支払い方法（例：コンビニ・銀行）", d.method);
+        const confirmed = check(
+          f,
+          "confirmed",
+          "写真が領収済みの証明であること、対象・金額・支払日を確認した",
+        );
+        node(
+          "small",
+          "納付書の印刷だけでは支払いを確認できません。読めない項目は手元の証憑と照合して入力してください。",
+          f,
+        );
+        button(
+          "支払いを確定",
+          async () => {
+            const payload = {
+              ...values(f),
+              sha256: record.sha256,
+              capture_id: r.id,
+              capture_sha256: r.sha256,
+              confirmed: confirmed.checked,
+            };
+            const result = await api("pay?id=" + record.id, payload);
+            if (result.needs_duplicate_review)
+              return duplicate(result, payload, async (p) => {
+                const done = await api("pay?id=" + record.id, p);
+                saved(done);
+                await detail(record.id);
+              });
+            saved(result);
+            await detail(record.id);
+          },
+          f,
+          "",
+        );
+        const reason = field(host, "reason", "この写真を使わない理由", "");
+        button(
+          "この領収書を除外する",
+          async () => {
+            saved(
+              await api("review?id=" + r.id, {
+                sha256: r.sha256,
+                action: "dismiss",
+                reason: reason.value,
+              }),
+            );
+            await load();
+          },
+          host,
+        );
+      }
+      $("#new").onclick = () => act(() => uploadChooser("notice", null));
+      $("#refresh").onclick = () => act(() => load());
+      document.querySelectorAll("[data-tab]").forEach(
+        (e) =>
+          (e.onclick = () =>
+            act(async () => {
+              tab = e.dataset.tab;
+              await load();
+            })),
+      );
+      for (const id of ["camera", "gallery"])
+        $("#" + id).onchange = (e) => {
+          const file = e.target.files[0];
+          e.target.value = "";
+          act(() => send(file));
+        };
+      act(() => load());
+    </script>
+  </body>
+</html>

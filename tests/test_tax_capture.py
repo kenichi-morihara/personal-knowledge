@@ -54,7 +54,7 @@ class CaptureTest(unittest.TestCase):
         self.assertIn('HttpOnly', response.headers['set-cookie'])
         self.assertIn('Secure', response.headers['set-cookie'])
         page = self.client.get('/')
-        return json.loads(re.search(r'const csrf=("[^"]+")', page.text)[1])
+        return json.loads(re.search(r'const csrf\s*=\s*("[^"]+")', page.text)[1])
 
     def test_auth_and_csrf(self):
         self.assertEqual(self.client.post('/capture', content=JPEG).status_code, 401)
@@ -139,7 +139,7 @@ class CaptureTest(unittest.TestCase):
         other = TestClient(create_app(self.captures, self.origin, 'key'), base_url=self.origin)
         other.post('/login', headers={'Origin': self.origin}, data={'key': 'key'})
         page = other.get('/')
-        token = json.loads(re.search(r'const csrf=("[^"]+")', page.text)[1])
+        token = json.loads(re.search(r'const csrf\s*=\s*("[^"]+")', page.text)[1])
         response = other.post('/logout', headers={'Origin': self.origin}, data={'csrf': token}, follow_redirects=False)
         self.assertEqual(response.status_code, 303)
         self.assertNotIn('const csrf=', other.get('/').text)

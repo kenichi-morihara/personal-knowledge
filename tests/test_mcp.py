@@ -127,7 +127,7 @@ class MCPTest(unittest.TestCase):
         initialized = self.rpc(token['access_token'], 'initialize', {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1'}})
         self.assertEqual(initialized.status_code, 200, initialized.text)
         tools = self.rpc(token['access_token'], 'tools/list', {}).json()['result']['tools']
-        self.assertEqual({t['name'] for t in tools}, {'search', 'fetch', 'get_template', 'get_guidance', 'put_record'})
+        self.assertEqual({t['name'] for t in tools}, {'search', 'fetch', 'get_template', 'get_guidance', 'put_record', 'list_obligations'})
         found = self.rpc(token['access_token'], 'tools/call', {'name': 'search', 'arguments': {'query': 'Canada'}}).json()['result']
         self.assertEqual(json.loads(found['content'][0]['text'])['results'][0]['id'], self.id)
         fetched = self.rpc(token['access_token'], 'tools/call', {'name': 'fetch', 'arguments': {'id': self.id}}).json()['result']
@@ -229,6 +229,20 @@ class MCPTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Remote has new commits'):
             self.store.put('notes/test.md', self.content('Overwrite'), self.store.fetch(self.id)['sha256'])
         self.assertEqual(self.git('rev-parse', 'HEAD'), before)
+
+    def test_list_obligations_over_http(self):
+        self.id = str(uuid4())
+        self.data.update(id=self.id, type='obligation', currency='JPY', amount_due='300', opening_paid='0',
+            amount_paid='0', amount_remaining='300', status='unpaid', payments=[], due_date='2026-11-30')
+        self.store.put('finance/tax.md', self.content('Tax'), '')
+        token, _ = self.tokens()
+        result = self.rpc(token['access_token'], 'tools/call', {'name': 'list_obligations',
+            'arguments': {'status': 'open', 'due_before': '2026-11-30'}}).json()['result']
+        self.assertFalse(result.get('isError', False), result)
+        report = json.loads(result['content'][0]['text'])
+        self.assertEqual(report['obligations'][0]['id'], self.id)
+        self.assertEqual(report['obligations'][0]['amount_remaining'], '300')
+        self.assertEqual(report['timezone'], 'Asia/Tokyo')
 
     def test_balance_snapshots_append_only(self):
         self.id = str(uuid4())

@@ -55,6 +55,16 @@ class ProjectionTest(unittest.TestCase):
         self.assertEqual((self.root / 'finance/tax.md').read_bytes(), before)
         json.dumps(report)
 
+    def test_voided_payment_is_not_projected(self):
+        self.record['payment_corrections'] = [dict(id=str(uuid4()), action='void',
+            payment_id=self.record['payments'][0]['id'], reason='Synthetic correction', corrected_at='2026-10-25')]
+        self.record.update(amount_paid='0', amount_remaining='200000', status='unpaid')
+        self.write()
+        text, report = manager.project(self.root)
+        self.assertNotIn('Recorded payment', text)
+        self.assertEqual(report['obligations'][0]['amount_remaining'], '200000')
+        self.assertEqual(loader.load_string(text)[1], [])
+
     def test_full_payment(self):
         self.record['payments'][0]['amount'] = '200000'
         self.record.update(amount_paid='200000', amount_remaining='0', status='paid')

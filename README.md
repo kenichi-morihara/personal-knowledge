@@ -58,6 +58,6 @@ UFJ残高はMoneytree Webの表示を確認し、[確認日時付きの記録](f
 
 初期の確認結果とClaude Codeの未検証事項は[検証記録](docs/verification.md)を参照してください。
 
-## 納付書をスマホで撮影
+## スマホで支払いを管理
 
-Androidの専用撮影ページからMac内OCRで読み取り、「要確認」として保存します。[使い方](docs/tax-capture.md)。`make capture-start`で起動し、`make capture-pending`で確認待ちを一覧にできます。未確認の撮影記録は債務や支払いに自動計上しません。
+Androidの画面から納付書・領収書をMac内OCRで読み取り、本人が確認して請求・支払いを登録できます。[支払い管理の使い方](docs/payment-management.md)。未払い一覧、一部払い、理由付き訂正、他AIからの参照に対応します。撮影だけでは「要確認」のままです。[使い方](docs/tax-capture.md)。`make capture-start`で起動し、`make capture-pending`で確認待ちを一覧にできます。未確認の撮影記録は債務や支払いに自動計上しません。

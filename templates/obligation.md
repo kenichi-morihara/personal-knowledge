@@ -5,6 +5,10 @@ type: obligation
 updated_at: null
 sources: []
 category: null
+issuer: null
+target_period: null
+installment: null
+image_refs: []
 fiscal_year: null
 currency: null
 amount_due: null
@@ -14,6 +18,8 @@ amount_remaining: null
 due_date: null
 status: unknown
 payments: []
+payment_corrections: []
+obligation_corrections: []
 ---
 # 税金・支払い義務
 
