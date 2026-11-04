@@ -86,3 +86,31 @@ MCPでの更新もスマホと同じロック・原本検証・ローカルジ�
 ## 実物での利用開始確認
 
 Android実機で1枚撮影し、本人が用紙と候補を照合して登録します。スマホ一覧とMCPから同じ金額・期別・期限を取得できることを確認し、残りの用紙を登録して件数を照合します。実際に支払った領収書がある場合だけ支払いを登録します。検証目的で未払いを支払済みにしません。
+
+## AI TasksのAPI契約と分類
+
+AI TasksのZod定義から生成したPython SDKを`scripts/vendor/ai_tasks_contract/`に同梱しています。
+APIの要求・応答をJSON Schemaで検証し、不一致は反映失敗として保持します。
+実行時にpersonal-opsのチェックアウトを必要としません。`requirements.txt`のjsonschemaもインストールしてください。
+
+契約を更新するときは、personal-ops/ai-tasksで`npm run contract:generate`と検証を行い、
+このリポジトリで次を実行します（PATHは取得済みチェックアウト）。
+
+```sh
+.venv/bin/python scripts/update_tasks_contract.py --source PATH/ai-tasks
+.venv/bin/python scripts/update_tasks_contract.py --source PATH/ai-tasks --check
+.venv/bin/python PATH/ai-tasks/scripts/test-python-contract.py "$PWD"
+```
+
+最後のコマンドは一時設定・一時DB・空きポートの実Workerを起動し、終了時に削除します。
+日常のToDoには検証データを追加しません。
+
+既定の分類は`default`（Personal Ops）。Macの非秘密設定`ai-tasks-config.json`に
+`collection_id`を追加するか、`AI_TASKS_COLLECTION_ID`を設定し、サーバーを再起動すると、
+新規請求のToDo作成先と一覧の初期選択に適用します。分類IDはAI Tasksの固定IDを使い、
+表示名を使わないでください。画面の「分類」で別分類のToDoも参照できます。
+
+作成先は原本保存と同時に送信待ちレコードへ固定します。通信断後も同一の登録キー・内容で
+再送します。設定変更で既存の送信内容は変えず、既存ToDoも勝手に移動しません。
+過去に作成先を指定せず保存した送信待ちは従来どおりdefaultに作成します。
+ToDoの詳細取得・状態更新は固定IDで行うため、AI Tasks側で分類を移しても連携は維持されます。

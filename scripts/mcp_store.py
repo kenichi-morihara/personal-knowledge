@@ -271,8 +271,8 @@ class Store:
                     db.execute('INSERT INTO pending_records(path,content,base_content) VALUES (?,?,?) ON CONFLICT(path) DO UPDATE SET content=excluded.content',
                                (change['path'], change['content'], self.committed(change['path'])))
                     if data.get('type') == 'obligation':
-                        from task_sync import queue_obligation
-                        queue_obligation(db, data, self.url(change['path']))
+                        from task_sync import queue_obligation, configured_collection
+                        queue_obligation(db, data, self.url(change['path']), configured_collection(self.state, strict=False))
         result = {'id': prepared[0][2]['id'], 'path': changes[0]['path'], 'paths': [c['path'] for c in changes],
                   'changed': changed, 'saved_locally': True, 'synced': False, 'commit': None}
         if self.auto_sync and not nested:

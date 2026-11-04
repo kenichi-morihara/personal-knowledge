@@ -3,14 +3,18 @@ import json
 import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse, urlencode, quote
+from urllib.parse import urlparse
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
-STATUSES = ('pending', 'running', 'review', 'done', 'failed', 'cancelled')
+from vendor.ai_tasks_contract import Client as ContractClient, STATUSES, CreateResponse, ListResponse, TaskDetail, Task, UpdateTask
+from vendor.ai_tasks_contract.runtime import ContractError, validate
 
 
 class TaskError(ValueError):
-    pass
+    def __init__(self, message, *, code=None, status=None):
+        super().__init__(message)
+        self.code = code
+        self.status = status
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -19,8 +23,12 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 class TasksClient:
-    def __init__(self, origin=None, client_id=None, client_secret=None, allow_local=False):
+    def __init__(self, origin=None, client_id=None, client_secret=None, allow_local=False, collection_id='default'):
         self.origin = (origin or '').rstrip('/')
+        if not isinstance(collection_id, str) or not 1 <= len(collection_id) <= 128:
+            raise TaskError('AI Tasksの分類IDを確認してください。')
+        self.collection_id = collection_id
+        self.sdk = ContractClient(self._transport)
         self.headers = {'Content-Type': 'application/json'}
         self.configured = bool(self.origin)
         if not self.configured:
@@ -41,39 +49,92 @@ class TasksClient:
             path = Path(state) / 'ai-tasks-config.json'
             if path.is_file():
                 config = json.loads(path.read_text())
+        if not isinstance(config, dict):
+            raise TaskError('AI Tasksの接続設定を確認してください。')
         origin = os.environ.get('AI_TASKS_URL', config.get('origin'))
         local = os.environ.get('AI_TASKS_ALLOW_LOCAL') == '1' if 'AI_TASKS_ALLOW_LOCAL' in os.environ else config.get('allow_local') is True
-        return cls(origin, os.environ.get('CF_ACCESS_CLIENT_ID'), os.environ.get('CF_ACCESS_CLIENT_SECRET'), local)
+        return cls(origin, os.environ.get('CF_ACCESS_CLIENT_ID'), os.environ.get('CF_ACCESS_CLIENT_SECRET'), local, os.environ.get('AI_TASKS_COLLECTION_ID', config.get('collection_id', 'default')))
 
-    def request(self, method, path, data=None, key=None):
+    def _transport(self, method, path, data=None, key=None):
         if not self.configured:
             raise TaskError('AI Tasks未接続です。バックエンドの接続先をMacで設定してください。')
         headers = dict(self.headers)
         if key:
             headers['Idempotency-Key'] = key
-        request = Request(self.origin + '/api/v1/tasks' + path, method=method, headers=headers,
+        request = Request(self.origin + path, method=method, headers=headers,
                           data=json.dumps(data, ensure_ascii=False).encode() if data is not None else None)
         try:
             with build_opener(NoRedirect).open(request, timeout=8) as response:
                 if 'application/json' not in response.headers.get('Content-Type', ''):
-                    raise TaskError('AI Tasksの認証・API応答を確認してください。')
-                return json.loads(response.read(2 * 1024 * 1024))
+                    raise TaskError('AI Tasksの認証・API応答を確認してください。', code='non_json_response')
+                raw = response.read(2 * 1024 * 1024 + 1)
+                if len(raw) > 2 * 1024 * 1024:
+                    raise TaskError('AI Tasksの応答サイズを確認してください。', code='invalid_response')
+                return json.loads(raw)
         except HTTPError as exc:
-            exc.close()
-            raise TaskError(f'AI Tasksへの接続または更新に失敗しました（HTTP {exc.code}）。再試行できます。') from None
+            code = 'http_error'
+            try:
+                if 'application/json' in exc.headers.get('Content-Type', ''):
+                    error = validate('ErrorResponse', json.loads(exc.read(65536)))
+                    code = error['error']['code']
+            except (ValueError, KeyError, TypeError):
+                code = 'invalid_error_response'
+            finally:
+                exc.close()
+            raise TaskError(f'AI Tasksへの接続または更新に失敗しました（HTTP {exc.code}）。', code=code, status=exc.code) from None
+        except TaskError:
+            raise
         except (URLError, OSError, ValueError):
-            raise TaskError('AI Tasksに接続できません。記録はMacに保存済みで、後から再試行できます。') from None
+            raise TaskError('AI Tasksに接続できません。記録はMacに保存済みで、後から再試行できます。', code='request_failed') from None
 
-    def list(self, page=0):
-        if not isinstance(page, int) or not 0 <= page <= 100000:
-            raise TaskError('ページ指定を確認してください。')
-        return self.request('GET', '?' + urlencode({'page': page}))
+    def request(self, method, path, data=None, key=None) -> CreateResponse:
+        # Compatibility for the durable outbox: creation still uses its original payload.
+        if method != 'POST' or path != '':
+            raise TaskError('未対応のAI Tasks操作です。')
+        try:
+            payload = dict(data)
+            return self.sdk.createTask(payload, key)
+        except ContractError as exc:
+            raise TaskError(str(exc), code='contract_mismatch') from None
 
-    def get(self, task_id):
-        return self.request('GET', '/' + quote(task_id, safe=''))['task']
+    def collections(self):
+        try:
+            return dict(self.sdk.listCollections(), selected_collection_id=self.collection_id)
+        except ContractError as exc:
+            raise TaskError(str(exc), code='contract_mismatch') from None
 
-    def update(self, task_id, payload):
-        return self.request('PATCH', '/' + quote(task_id, safe=''), payload)['task']
+    def list(self, page: int = 0, collection_id: str | None = None) -> ListResponse:
+        try:
+            return self.sdk.listTasks({'page': page, 'collection_id': collection_id or self.collection_id})
+        except ContractError as exc:
+            raise TaskError(str(exc), code='contract_mismatch') from None
+
+    def get(self, task_id: str) -> TaskDetail:
+        try:
+            return self.sdk.getTask(task_id)['task']
+        except ContractError as exc:
+            raise TaskError(str(exc), code='contract_mismatch') from None
+
+    def update(self, task_id: str, payload: UpdateTask) -> Task:
+        try:
+            return self.sdk.updateTask(task_id, payload)['task']
+        except ContractError as exc:
+            raise TaskError(str(exc), code='contract_mismatch') from None
+
+
+def configured_collection(state, *, strict=True):
+    path = Path(state) / 'ai-tasks-config.json'
+    try:
+        config = json.loads(path.read_text()) if path.is_file() else {}
+        value = os.environ.get('AI_TASKS_COLLECTION_ID', config.get('collection_id', 'default'))
+        if not isinstance(value, str) or not 1 <= len(value) <= 128:
+            raise TaskError('AI Tasksの分類IDを確認してください。')
+        return value
+    except (OSError, ValueError, AttributeError):
+        if strict:
+            raise TaskError('AI Tasksの分類設定を確認してください。') from None
+        # Preserve local financial saving even when the independent task config is broken.
+        return None
 
 
 def desired_task(data, url):
@@ -83,10 +144,14 @@ def desired_task(data, url):
                 due_date=data.get('due_date'), status='cancelled' if data.get('lifecycle') == 'cancelled' else 'done' if data.get('status') == 'paid' else 'pending')
 
 
-def queue_obligation(db, data, url):
+def queue_obligation(db, data, url, collection_id="default"):
     payload = json.dumps(desired_task(data, url), ensure_ascii=False, sort_keys=True)
+    initial_data = desired_task(data, url)
+    if collection_id is not None:
+        initial_data['collection_id'] = collection_id
+    initial = json.dumps(initial_data, ensure_ascii=False, sort_keys=True)
     db.execute('INSERT INTO task_links(record_id,create_payload,desired) VALUES (?,?,?) ON CONFLICT(record_id) DO UPDATE SET desired=excluded.desired',
-               (data['id'], payload, payload))
+               (data['id'], initial, payload))
 
 
 class TaskSync:
@@ -113,7 +178,7 @@ class TaskSync:
         with self.store.locked(), self.store.database() as db:
             for path, _, data in self.store.records():
                 if data.get('type') == 'obligation':
-                    queue_obligation(db, data, self.store.url(path))
+                    queue_obligation(db, data, self.store.url(path), getattr(self.client, 'collection_id', 'default'))
         # Independent of record writes. Never hold the record lock over HTTP.
         with (self.store.state / 'tasks-sync.lock').open('a') as mutex:
             import fcntl

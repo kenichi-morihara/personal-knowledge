@@ -1292,6 +1292,7 @@
           "",
         );
       }
+      let tasksCollection = null;
       async function showTasks(page = 0) {
         content.replaceChildren();
         node("h2", "AI TasksのToDo", content);
@@ -1300,7 +1301,21 @@
           "タスクの正本はpersonal-opsのAI Tasksです。ToDoを完了しても、請求の支払い実績は変わりません。",
           content,
         );
-        const report = await api("tasks?page=" + page);
+        const groups = await api("task-collections");
+        if (tasksCollection === null) tasksCollection = groups.selected_collection_id;
+        if (groups.collections.length) {
+          const select = field(content, "collection", "分類", tasksCollection, "text", []);
+          for (const group of groups.collections) {
+            const option = node("option", group.name, select);
+            option.value = group.id;
+          }
+          select.value = tasksCollection;
+          select.onchange = () => act(async () => {
+            tasksCollection = select.value;
+            await showTasks(0);
+          });
+        }
+        const report = await api("tasks?page=" + page + "&collection_id=" + encodeURIComponent(tasksCollection));
         if (!report.configured) {
           node(
             "p",

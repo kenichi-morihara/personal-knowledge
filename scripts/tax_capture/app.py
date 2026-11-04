@@ -139,11 +139,16 @@ def create_app(captures, origin, owner_key, local_port=8780, background_sync=Fal
             if request.method == 'GET':
                 if operation == 'overview':
                     return JSONResponse(await run_in_threadpool(management.overview))
+                if operation == 'task-collections':
+                    if not management.tasks.client.configured:
+                        return JSONResponse({'collections': [], 'selected_collection_id': 'default'})
+                    return JSONResponse(await run_in_threadpool(management.tasks.client.collections))
                 if operation == 'tasks':
                     if not management.tasks.client.configured:
                         return JSONResponse({'configured': False, 'tasks': [], 'next_page': None})
                     page_number = int(request.query_params.get('page', '0'))
-                    report = await run_in_threadpool(management.tasks.client.list, page_number)
+                    collection_id = request.query_params.get('collection_id')
+                    report = await run_in_threadpool(management.tasks.client.list, page_number, collection_id) if collection_id else await run_in_threadpool(management.tasks.client.list, page_number)
                     return JSONResponse(dict(report, configured=True))
                 if operation == 'record':
                     return JSONResponse(await run_in_threadpool(management.get, record_id))
